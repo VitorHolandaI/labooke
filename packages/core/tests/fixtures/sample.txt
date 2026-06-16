@@ -1,0 +1,5 @@
+Sample TXT fixture for labooke extractor tests.
+Line two of the text fixture.
+Line three keeps the file above one line so page splitting works.
+Line four is filler content.
+Line five marks the end of the fixture.

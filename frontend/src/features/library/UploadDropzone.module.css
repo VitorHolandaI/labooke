@@ -1,0 +1,331 @@
+.dropzone,
+.dropzoneOver {
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  text-align: center;
+  background: var(--color-surface);
+  margin-bottom: var(--space-4);
+}
+
+.dropzoneOver {
+  border-color: var(--color-accent);
+  background: var(--color-bg);
+}
+
+.text {
+  margin: 0 0 var(--space-2);
+  color: var(--color-text-muted);
+}
+
+.button {
+  font: inherit;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.button:hover {
+  border-color: var(--color-accent);
+}
+
+.input {
+  display: none;
+}
+
+.queue {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-3) 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.entry,
+.entryOk,
+.entryError {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  font-size: 0.8rem;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+}
+
+.entryOk {
+  color: var(--color-accent);
+}
+
+.entryError {
+  color: var(--color-danger);
+}
+
+.name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: var(--space-3);
+}
+
+.statusText {
+  flex-shrink: 0;
+}
+
+.uploadProgress {
+  grid-column: 1 / -1;
+  height: 3px;
+  background: var(--color-border);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: var(--space-1);
+}
+
+.uploadProgressFill {
+  height: 100%;
+  background: var(--color-accent);
+  border-radius: 2px;
+  transition: width 0.1s linear;
+}
+
+.uploadProgressIndeterminate {
+  height: 100%;
+  width: 40%;
+  background: var(--color-accent);
+  border-radius: 2px;
+  animation: indeterminate 1.4s ease-in-out infinite;
+}
+
+@keyframes indeterminate {
+  0%   { margin-left: -40%; }
+  100% { margin-left: 110%; }
+}
+
+/* Staging phase */
+
+.stagingList {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-3) 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.stagingEntry {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  text-align: left;
+}
+
+.stagingHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stagingFilename {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.removeBtn {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0 var(--space-1);
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.removeBtn:hover {
+  color: var(--color-danger);
+}
+
+.titleInput {
+  font: inherit;
+  font-size: 0.85rem;
+  width: 100%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  color: var(--color-text);
+  box-sizing: border-box;
+}
+
+.titleInput:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.stagingTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+
+.tagChipOn,
+.tagChipOff {
+  font: inherit;
+  font-size: 0.7rem;
+  padding: 1px var(--space-2);
+  border-radius: 999px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: opacity 0.1s;
+}
+
+.tagChipOn {
+  color: #fff;
+  text-shadow: 0 0 2px rgba(0, 0, 0, 0.35);
+}
+
+.tagChipOff {
+  background: transparent;
+  border-color: var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.tagChipOff:hover {
+  border-color: var(--color-accent);
+  color: var(--color-text);
+}
+
+.addTagBtn {
+  font: inherit;
+  font-size: 0.7rem;
+  padding: 1px var(--space-2);
+  border-radius: 999px;
+  cursor: pointer;
+  border: 1px dashed var(--color-border);
+  background: transparent;
+  color: var(--color-text-muted);
+}
+
+.addTagBtn:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.inlineTagForm {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+  margin-top: var(--space-1);
+}
+
+.inlineTagInput {
+  font: inherit;
+  font-size: 0.8rem;
+  flex: 1;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 2px var(--space-2);
+  color: var(--color-text);
+  min-width: 0;
+}
+
+.inlineTagInput:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.inlineTagInputError {
+  font: inherit;
+  font-size: 0.8rem;
+  flex: 1;
+  background: var(--color-surface);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-sm);
+  padding: 2px var(--space-2);
+  color: var(--color-danger);
+  min-width: 0;
+}
+
+.inlineTagInputError::placeholder {
+  color: var(--color-danger);
+  opacity: 0.8;
+}
+
+.inlineTagInputError:focus {
+  outline: none;
+  border-color: var(--color-danger);
+}
+
+.inlineTagColor {
+  width: 28px;
+  height: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 1px;
+  cursor: pointer;
+  background: none;
+  flex-shrink: 0;
+}
+
+.inlineTagSave {
+  font: inherit;
+  font-size: 0.75rem;
+  padding: 2px var(--space-2);
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.inlineTagSave:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.inlineTagCancel {
+  font: inherit;
+  font-size: 0.75rem;
+  padding: 2px var(--space-2);
+  background: transparent;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.inlineTagCancel:hover {
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
+.uploadBtn {
+  font: inherit;
+  margin-top: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  width: 100%;
+}
+
+.uploadBtn:hover {
+  opacity: 0.9;
+}

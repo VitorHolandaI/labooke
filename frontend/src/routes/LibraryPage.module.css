@@ -1,0 +1,71 @@
+.layout {
+  display: flex;
+  gap: var(--space-6);
+  min-height: 100%;
+  margin: calc(-1 * var(--space-6));
+}
+
+.content {
+  flex: 1;
+  padding: var(--space-6);
+  min-width: 0;
+}
+
+.heading {
+  margin: 0 0 var(--space-4);
+  font-size: var(--font-size-2xl);
+  font-weight: 600;
+}
+
+/* mobile filter toggle — hidden on desktop */
+.filterToggle {
+  display: none;
+}
+
+/* backdrop overlay behind mobile sidebar */
+.sidebarOverlay {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .layout {
+    flex-direction: column;
+    gap: 0;
+    margin: calc(-1 * var(--space-3));
+  }
+
+  .content {
+    padding: var(--space-3);
+  }
+
+  .heading {
+    font-size: 1.4rem;
+  }
+
+  .filterToggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.875rem;
+    margin-bottom: var(--space-3);
+  }
+
+  .filterToggle:hover {
+    border-color: var(--color-accent);
+  }
+
+  .sidebarOverlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 29;
+  }
+}

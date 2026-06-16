@@ -1,0 +1,21 @@
+[project]
+name = "labooke-bible"
+version = "0.0.1"
+description = "Bible CLI for labooke: search, browse, and read books from the terminal"
+requires-python = ">=3.12"
+dependencies = [
+    "typer>=0.12",
+    "prompt-toolkit>=3.0",
+    "rich>=13.0",
+    "httpx>=0.27",
+]
+
+[project.scripts]
+bible = "labooke_bible.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/labooke_bible"]

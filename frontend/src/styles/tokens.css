@@ -1,0 +1,54 @@
+:root,
+:root[data-theme="light"] {
+  --color-bg: #fafafa;
+  --color-surface: #ffffff;
+  --color-border: #e4e4e7;
+  --color-text: #1f2937;
+  --color-text-muted: #6b7280;
+  --color-accent: #4338ca;
+  --color-accent-contrast: #ffffff;
+  --color-danger: #b91c1c;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+  --font-size-2xl: 1.75rem;
+  --font-mono: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, monospace;
+
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --color-bg: #0f1115;
+  --color-surface: #181b22;
+  --color-border: #2a2f3a;
+  --color-text: #e5e7eb;
+  --color-text-muted: #9aa0aa;
+  --color-accent: #818cf8;
+  --color-accent-contrast: #0f1115;
+  --color-danger: #f87171;
+
+  color-scheme: dark;
+}
+
+/* Warm night reading — browns/ambers, no blue light */
+:root[data-theme="night"] {
+  --color-bg: #1c1710;
+  --color-surface: #241f17;
+  --color-border: #3d3525;
+  --color-text: #e8d5b0;
+  --color-text-muted: #a89070;
+  --color-accent: #c8973a;
+  --color-accent-contrast: #1c1710;
+  --color-danger: #d97060;
+
+  color-scheme: dark;
+}
