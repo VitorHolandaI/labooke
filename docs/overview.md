@@ -3,6 +3,8 @@
 Biblioteca pessoal de livros auto-hospedada. PDF, EPUB, TXT, MD.
 Organização por tags, busca semântica, leitor integrado, standby < 175 MB.
 
+![Library](images/library-amber.png)
+
 ## Stack
 
 | Camada     | Tecnologia                                              |

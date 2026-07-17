@@ -2,6 +2,8 @@
 
 → [overview.md](overview.md) | [api.md](api.md)
 
+![Upload](images/upload.png)
+
 ## Upload pela UI
 
 1. Arraste arquivos (PDF/EPUB/TXT/MD) ou clique em **Choose files**

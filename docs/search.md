@@ -2,6 +2,8 @@
 
 → [overview.md](overview.md) | [api.md](api.md) | [docker.md](docker.md)
 
+![Filtro por tag](images/library-filter-tag.png)
+
 ## Modos
 
 | Modo        | Como funciona                                      | Velocidade    |

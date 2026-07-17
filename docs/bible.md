@@ -3,6 +3,8 @@
 Terminal client para o labooke. Acessa a biblioteca via HTTP (`LABOOKE_API_URL`,
 padrão `http://localhost:8000`) — não conecta direto ao banco.
 
+![Bible CLI](images/bible-cli.png)
+
 ## Comandos
 
 | Comando | O que faz |
