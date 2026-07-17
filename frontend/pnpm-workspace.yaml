@@ -1,2 +1,8 @@
+allowBuilds:
+  core-js: set this to true or false
+  es5-ext: set this to true or false
+  msw: set this to true or false
 onlyBuiltDependencies:
   - msw
+overrides:
+  "@xmldom/xmldom": "^0.8.13"
