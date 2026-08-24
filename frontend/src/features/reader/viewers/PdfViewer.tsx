@@ -5,6 +5,7 @@ import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
 import { bookFileUrl } from "../../../api/reader";
 import { useSwipeGesture } from "../hooks/useSwipeGesture";
+import { PageJump } from "./PageJump";
 import styles from "./PdfViewer.module.css";
 
 GlobalWorkerOptions.workerSrc = PdfWorker;
@@ -182,6 +183,7 @@ export function PdfViewer({ bookId, initialPage = 1, onPageChange, isBookmarked,
       <div className={styles.controls}>
         <button type="button" disabled={page <= 1} onClick={goPrev}>←</button>
         <span className={styles.counter}>{counterLabel}</span>
+        <PageJump current={page} total={total} onJump={setPage} />
         <button type="button" disabled={page + step - 1 >= total} onClick={goNext}>→</button>
         <div className={styles.controlsSep} />
         {onAddBookmark && (

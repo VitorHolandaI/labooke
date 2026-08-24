@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "r
 
 import { bookFileUrl } from "../../../api/reader";
 import { useSwipeGesture } from "../hooks/useSwipeGesture";
+import { PageJump } from "./PageJump";
 import styles from "./TextViewer.module.css";
 
 interface Props {
@@ -189,6 +190,7 @@ export function TextViewer({
         <span className={styles.counter}>
           {page} / {totalPages}
         </span>
+        <PageJump current={page} total={totalPages} onJump={setPage} />
         <button
           type="button"
           disabled={page >= totalPages}
