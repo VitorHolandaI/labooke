@@ -1,0 +1,5 @@
+# Fixa o projeto do ai-memory para esta árvore.
+# Sem marker, o resolvedor caía no catch-all `vitor`, misturando este projeto
+# com roomba_40k, jukebox_pay e a appliance llama.cpp no mesmo saco.
+workspace = "default"
+project = "labooke"
