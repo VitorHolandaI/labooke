@@ -34,6 +34,13 @@ class Settings(BaseSettings):
     api_reload: bool = Field(default=True)
     cors_origins: Annotated[list[str], NoDecode] = Field(default_factory=list)
 
+    llm_base_url: str = Field(default="")
+    llm_model: str = Field(default="")
+    llm_api_key: str = Field(default="")
+    llm_summary_pages: int = Field(default=10, ge=1)
+    llm_rag_k: int = Field(default=10, ge=1)
+    llm_auto_summarize: bool = Field(default=False)
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def _split_cors_origins(cls, raw: object) -> object:
@@ -56,3 +63,8 @@ class Settings(BaseSettings):
     def db_path(self) -> Path:
         """Return the path of the SQLite database file."""
         return self.data_dir / "labooke.db"
+
+    @property
+    def llm_enabled(self) -> bool:
+        """Return True when the LLM endpoint and model are configured."""
+        return bool(self.llm_base_url) and bool(self.llm_model)

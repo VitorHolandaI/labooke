@@ -7,6 +7,7 @@ from labooke_core.services.reembed_service import ReembedService
 from labooke_core.store.books_repo import BooksRepo
 from labooke_core.store.chunks_repo import ChunksRepo
 from labooke_core.store.db import open_db
+from labooke_core.store.summaries_repo import SummariesRepo
 from labooke_core.store.vectors_repo import VEC_DIM, VectorsRepo
 
 
@@ -90,3 +91,47 @@ def test_reembed_book_updates_chunk_count_when_chunk_size_changes(tmp_path):
         (1, 2)
     ]
     assert conn.execute("SELECT COUNT(*) FROM vec_chunks").fetchone()[0] == 1
+
+
+def test_reembed_refreshes_summary_vector_from_rag_text(tmp_path):
+    conn = open_db(":memory:", seed_tags=False)
+    books = BooksRepo(conn)
+    chunks = ChunksRepo(conn)
+    vectors = VectorsRepo(conn)
+    summaries = SummariesRepo(conn)
+    path = tmp_path / "sample.txt"
+    path.write_text("line 1\nline 2\nline 3", encoding="utf-8")
+    book = books.insert(sha256="a", path=path, title="Sample", format="txt")
+    books.update_description(book.id, "readable summary")
+    books.update_rag_text(book.id, "rag topics: A B C")
+    pipeline = BookEmbeddingPipeline(
+        books,
+        chunks,
+        vectors,
+        encode_texts=ConstantEncoder(),
+        page_chunker=one_page_chunker,
+    )
+    service = ReembedService(books, pipeline, summaries)
+    service.reembed_book(book.id)
+    assert [book_id for book_id, _ in summaries.knn(query=[2.0] * VEC_DIM, k=5)] == [book.id]
+
+
+def test_reembed_uses_description_fallback_without_rag_text(tmp_path):
+    conn = open_db(":memory:", seed_tags=False)
+    books = BooksRepo(conn)
+    chunks = ChunksRepo(conn)
+    vectors = VectorsRepo(conn)
+    summaries = SummariesRepo(conn)
+    path = tmp_path / "sample.txt"
+    path.write_text("line 1\nline 2\nline 3", encoding="utf-8")
+    book = books.insert(sha256="b", path=path, title="Sample", format="txt")
+    books.update_description(book.id, "fallback summary text")
+    pipeline = BookEmbeddingPipeline(
+        books,
+        chunks,
+        vectors,
+        encode_texts=ConstantEncoder(),
+        page_chunker=one_page_chunker,
+    )
+    ReembedService(books, pipeline, summaries).reembed_book(book.id)
+    assert len(summaries.knn(query=[2.0] * VEC_DIM, k=5)) == 1

@@ -84,3 +84,22 @@ class ProgressRepo:
             "DELETE FROM reading_progress WHERE book_id = ?", (book_id,)
         )
         self._conn.commit()
+
+    def recent(self, *, limit: int = 10) -> list[ReadingProgress]:
+        """Return books with saved progress, most recently read first.
+
+        Example:
+            >>> from labooke_core.store.db import open_db
+            >>> conn = open_db(":memory:")
+            >>> repo = ProgressRepo(conn)
+            >>> repo.recent()
+            []
+        """
+        if limit < 1:
+            raise ValueError(f"limit must be >= 1, got {limit}")
+        rows = self._conn.execute(
+            "SELECT book_id, page_no, updated_at FROM reading_progress "
+            "ORDER BY updated_at DESC, book_id DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
+        return [_row_to_progress(r) for r in rows]

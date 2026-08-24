@@ -21,7 +21,10 @@ from labooke_core.store._rowid import last_insert_id
 if TYPE_CHECKING:
     from labooke_core.store.db import LockedConnection
 
-_BOOK_COLUMNS = "id, sha256, path, title, author, format, page_count, status, ingest_error"
+_BOOK_COLUMNS = (
+    "id, sha256, path, title, author, description, rag_text, format, "
+    "page_count, status, ingest_error"
+)
 
 
 def _row_to_book(row: sqlite3.Row | tuple) -> Book:
@@ -32,10 +35,12 @@ def _row_to_book(row: sqlite3.Row | tuple) -> Book:
         path=Path(row[2]) if row[2] is not None else None,
         title=row[3],
         author=row[4],
-        format=row[5],
-        page_count=row[6],
-        status=BookStatus(row[7]),
-        ingest_error=row[8],
+        description=row[5],
+        rag_text=row[6],
+        format=row[7],
+        page_count=row[8],
+        status=BookStatus(row[9]),
+        ingest_error=row[10],
         tags=[],
     )
 
@@ -152,6 +157,8 @@ class BooksRepo:
         title: str,
         format: str,
         author: str | None = None,
+        description: str | None = None,
+        rag_text: str | None = None,
         page_count: int = 0,
         status: BookStatus = BookStatus.PENDING,
     ) -> Book:
@@ -164,9 +171,21 @@ class BooksRepo:
             1
         """
         cursor = self._conn.execute(
-            "INSERT INTO books (sha256, path, title, author, format, page_count, status) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (sha256, str(path), title, author, format, page_count, status.value),
+            "INSERT INTO books "
+            "(sha256, path, title, author, description, rag_text, format, "
+            "page_count, status) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                sha256,
+                str(path),
+                title,
+                author,
+                description,
+                rag_text,
+                format,
+                page_count,
+                status.value,
+            ),
         )
         self._conn.commit()
         return self.get(last_insert_id(cursor))
@@ -217,6 +236,18 @@ class BooksRepo:
         """
         rows = self._conn.execute(
             f"SELECT {_BOOK_COLUMNS} FROM books ORDER BY id"
+        ).fetchall()
+        return [_row_to_book(r) for r in rows]
+
+    def list_missing_description(self) -> list[Book]:
+        """List books that have no LLM summary yet (empty ``description``).
+
+        Used by the batch summarize flow to pick candidates without
+        re-summarizing books that already have one.
+        """
+        rows = self._conn.execute(
+            f"SELECT {_BOOK_COLUMNS} FROM books "
+            "WHERE description IS NULL OR description = '' ORDER BY id"
         ).fetchall()
         return [_row_to_book(r) for r in rows]
 
@@ -285,6 +316,58 @@ class BooksRepo:
             raise ValueError("title must be non-empty")
         self.get(book_id)
         self._conn.execute("UPDATE books SET title = ? WHERE id = ?", (normalized, book_id))
+        self._conn.commit()
+        return self.get(book_id)
+
+    def update_author(self, book_id: int, author: str | None) -> Book:
+        """Set or clear a book's author and return the refreshed row.
+
+        Example:
+            >>> from labooke_core.store.db import open_db
+            >>> repo = BooksRepo(open_db(":memory:", seed_tags=False))
+            >>> book = repo.insert(sha256="abc", path="/tmp/x.pdf", title="X", format="pdf")
+            >>> repo.update_author(book.id, "Jane").author
+            'Jane'
+        """
+        self.get(book_id)
+        self._conn.execute("UPDATE books SET author = ? WHERE id = ?", (author, book_id))
+        self._conn.commit()
+        return self.get(book_id)
+
+    def update_description(self, book_id: int, description: str | None) -> Book:
+        """Set or clear a book's description and return the refreshed row.
+
+        Example:
+            >>> from labooke_core.store.db import open_db
+            >>> repo = BooksRepo(open_db(":memory:", seed_tags=False))
+            >>> book = repo.insert(sha256="abc", path="/tmp/x.pdf", title="X", format="pdf")
+            >>> repo.update_description(book.id, "A summary").description
+            'A summary'
+        """
+        self.get(book_id)
+        self._conn.execute(
+            "UPDATE books SET description = ? WHERE id = ?", (description, book_id)
+        )
+        self._conn.commit()
+        return self.get(book_id)
+
+    def update_rag_text(self, book_id: int, rag_text: str | None) -> Book:
+        """Set or clear a book's retrieval text and return the refreshed row.
+
+        ``rag_text`` is the LLM-generated keyword-rich text embedded for
+        semantic retrieval (see ``SummarizeService``).
+
+        Example:
+            >>> from labooke_core.store.db import open_db
+            >>> repo = BooksRepo(open_db(":memory:", seed_tags=False))
+            >>> book = repo.insert(sha256="abc", path="/tmp/x.pdf", title="X", format="pdf")
+            >>> repo.update_rag_text(book.id, "topics: A, B").rag_text
+            'topics: A, B'
+        """
+        self.get(book_id)
+        self._conn.execute(
+            "UPDATE books SET rag_text = ? WHERE id = ?", (rag_text, book_id)
+        )
         self._conn.commit()
         return self.get(book_id)
 

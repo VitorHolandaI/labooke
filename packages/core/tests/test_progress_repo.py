@@ -79,3 +79,29 @@ def test_book_delete_cascades_progress(books, repo):
     repo.set(book_id=book.id, page_no=7)
     books.delete(book.id)
     assert repo.get(book.id) is None
+
+
+def test_recent_returns_most_recent_first(books, repo):
+    first = make_book(books, sha="first")
+    second = make_book(books, sha="second")
+    repo.set(book_id=first.id, page_no=1)
+    repo.set(book_id=second.id, page_no=2)
+    recent = repo.recent()
+    assert [entry.book_id for entry in recent] == [second.id, first.id]
+
+
+def test_recent_honors_limit(books, repo):
+    a = make_book(books, sha="a")
+    b = make_book(books, sha="b")
+    repo.set(book_id=a.id, page_no=1)
+    repo.set(book_id=b.id, page_no=1)
+    assert [entry.book_id for entry in repo.recent(limit=1)] == [b.id]
+
+
+def test_recent_rejects_limit_below_one(books, repo):
+    with pytest.raises(ValueError, match="limit must be >= 1"):
+        repo.recent(limit=0)
+
+
+def test_recent_is_empty_without_progress(books, repo):
+    assert repo.recent() == []

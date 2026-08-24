@@ -149,6 +149,26 @@ def test_update_title_raises_when_missing(repo):
         repo.update_title(9999, "X")
 
 
+def test_insert_persists_description(repo):
+    book = repo.insert(
+        sha256="desc", path="/tmp/d.pdf", title="D", format="pdf", description="A summary"
+    )
+    assert repo.get(book.id).description == "A summary"
+
+
+def test_update_author_sets_and_clears(repo):
+    book = make_book(repo, sha="author", title="A")
+    assert repo.update_author(book.id, "Jane").author == "Jane"
+    assert repo.update_author(book.id, None).author is None
+
+
+def test_update_description_sets_and_clears(repo):
+    book = make_book(repo, sha="desc2", title="D")
+    updated = repo.update_description(book.id, "About things")
+    assert updated.description == "About things"
+    assert repo.update_description(book.id, None).description is None
+
+
 def test_find_returns_all_books_when_filters_are_empty(repo):
     a = make_book(repo, sha="a", title="A")
     b = make_book(repo, sha="b", title="B")
