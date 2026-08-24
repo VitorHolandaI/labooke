@@ -77,28 +77,27 @@ def search(
     any_tag: bool = typer.Option(False, "--any", help="Match any tag instead of all."),
     k: int = typer.Option(10, "-k", help="Max number of results."),
     lexical: bool = typer.Option(
-        False, "--lexical", help="Use lexical title search instead of semantic."
+        False, "--lexical", help="Use lexical title search instead of LLM (ask) search."
     ),
 ) -> None:
-    """Search the library by query. Defaults to semantic (embedding) search."""
+    """Search the library by query. Defaults to the LLM ask endpoint."""
     _history().push(query)
     try:
         client = _client()
         tag_ids = _slugs_to_ids(client, tag)
-        hits = client.search(
-            query,
-            mode="lexical" if lexical else "semantic",
-            tag_ids=tag_ids or None,
-            tag_mode="any" if any_tag else "all",
-            k=k,
-        )
+        if lexical:
+            hits = client.search(
+                query,
+                mode="lexical",
+                tag_ids=tag_ids or None,
+                tag_mode="any" if any_tag else "all",
+                k=k,
+            )
+            _echo_hits(hits)
+        else:
+            _echo_ask(client.ask(query), tag_ids, any_tag)
     except ApiError as e:
         _abort(e)
-    if not hits:
-        typer.echo("No results.")
-        return
-    for i, hit in enumerate(hits, 1):
-        typer.echo(f"{i}. [{hit['book_id']}] p{hit['page_start']}  {hit['snippet']}")
 
 
 @app.command()
@@ -176,7 +175,7 @@ def last(
     any_tag: bool = typer.Option(False, "--any", help="Match any tag instead of all."),
     k: int = typer.Option(10, "-k", help="Max number of results."),
     lexical: bool = typer.Option(
-        False, "--lexical", help="Use lexical title search instead of semantic."
+        False, "--lexical", help="Use lexical title search instead of LLM (ask) search."
     ),
 ) -> None:
     """Re-run the most recent search query."""
@@ -188,15 +187,25 @@ def last(
     try:
         client = _client()
         tag_ids = _slugs_to_ids(client, tag)
-        hits = client.search(
-            query,
-            mode="lexical" if lexical else "semantic",
-            tag_ids=tag_ids or None,
-            tag_mode="any" if any_tag else "all",
-            k=k,
-        )
+        if lexical:
+            hits = client.search(
+                query,
+                mode="lexical",
+                tag_ids=tag_ids or None,
+                tag_mode="any" if any_tag else "all",
+                k=k,
+            )
+            _echo_hits(hits)
+        else:
+            _echo_ask(client.ask(query), tag_ids, any_tag)
     except ApiError as e:
         _abort(e)
+
+
+# ── helpers ───────────────────────────────────────────────────────────────────
+
+def _echo_hits(hits: list[dict]) -> None:
+    """Print flat search hits as a numbered list."""
     if not hits:
         typer.echo("No results.")
         return
@@ -204,7 +213,30 @@ def last(
         typer.echo(f"{i}. [{hit['book_id']}] p{hit['page_start']}  {hit['snippet']}")
 
 
-# ── helpers ───────────────────────────────────────────────────────────────────
+def _matches_tags(book: dict, wanted: set[int], any_tag: bool) -> bool:
+    """Return whether ``book`` matches the wanted tag ids."""
+    present = {t["id"] for t in book.get("tags", [])}
+    if any_tag:
+        return bool(present & wanted)
+    return wanted <= present
+
+
+def _echo_ask(result: dict, tag_ids: list[int], any_tag: bool) -> None:
+    """Print the LLM answer followed by the recommended books."""
+    answer = (result.get("answer") or "").strip()
+    if answer:
+        typer.echo(answer)
+        typer.echo("")
+    books = result.get("books", [])
+    if tag_ids:
+        wanted = set(tag_ids)
+        books = [b for b in books if _matches_tags(b, wanted, any_tag)]
+    if not books:
+        typer.echo("No results.")
+        return
+    for i, book in enumerate(books, 1):
+        author = f" — {book['author']}" if book.get("author") else ""
+        typer.echo(f"{i}. [{book['id']}] {book['title']}{author}")
 
 def _slugs_to_ids(client: ApiClient, slugs: list[str]) -> list[int]:
     """Return tag IDs for the given slugs, silently ignoring unknowns."""

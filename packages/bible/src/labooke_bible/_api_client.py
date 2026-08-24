@@ -103,6 +103,10 @@ class ApiClient:
         result = self._get("/api/search", params)
         return result.get("items", [])
 
+    def ask(self, question: str) -> dict:
+        """Ask the library in natural language (LLM); returns {answer, books}."""
+        return self._post("/api/ask", json={"question": question})
+
     # ── reader ────────────────────────────────────────────────────────────────
 
     def get_page(self, book_id: int, page_no: int) -> str:

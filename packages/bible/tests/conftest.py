@@ -104,6 +104,10 @@ class FakeApiClient:
             hits.append({"book_id": b["id"], "page_start": 1, "snippet": b["title"]})
         return hits[:k]
 
+    def ask(self, question: str) -> dict:
+        books = [self._book_out(b) for b in self._books.values()]
+        return {"answer": f"Recomendo para: {question}", "books": books}
+
     def get_page(self, book_id: int, page_no: int) -> str:
         return "page text"
 
