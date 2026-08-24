@@ -1,9 +1,12 @@
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
+import { updateTag } from "../../api/tags";
 import { useTags } from "../library/hooks/useTags";
 import { CreateTagForm } from "./CreateTagForm";
 import { MergeTagsDialog } from "./MergeTagsDialog";
 import { TagRow } from "./TagRow";
+import { randomTagColor } from "./randomColor";
 import { useCreateTag, useMergeTags } from "./hooks/useTagActions";
 import styles from "./TagsPage.module.css";
 
@@ -11,7 +14,17 @@ export function TagsPage() {
   const { data: tagCounts = [], isLoading, isError } = useTags();
   const create = useCreateTag();
   const merge = useMergeTags();
+  const queryClient = useQueryClient();
   const [showMerge, setShowMerge] = useState(false);
+
+  const randomize = useMutation({
+    mutationFn: async () => {
+      for (const { tag } of tagCounts) {
+        await updateTag(tag.id, { name: tag.name, color: randomTagColor() });
+      }
+    },
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["tags"] }),
+  });
 
   const tags = tagCounts.map((tc) => tc.tag);
 
@@ -23,6 +36,17 @@ export function TagsPage() {
         isPending={create.isPending}
         onSubmit={(body) => create.mutate(body)}
       />
+
+      {tagCounts.length > 0 && (
+        <button
+          type="button"
+          className={styles.mergeBtn}
+          onClick={() => randomize.mutate()}
+          disabled={randomize.isPending}
+        >
+          {randomize.isPending ? "Randomizando…" : "Randomizar cores de todas as tags"}
+        </button>
+      )}
 
       {isLoading && <p className={styles.status}>Loading…</p>}
       {isError && <p className={styles.error}>Failed to load tags.</p>}

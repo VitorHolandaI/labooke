@@ -10,6 +10,13 @@ export interface BookFilters {
   tag_mode?: "all" | "any";
   exclude?: number[];
   q?: string;
+  sort?: "id" | "recent";
+}
+
+export interface BookUpdate {
+  title?: string;
+  author?: string | null;
+  description?: string | null;
 }
 
 export function listBooks(filters: BookFilters = {}) {
@@ -20,7 +27,7 @@ export function getBook(id: number) {
   return api.get<BookOut>(`/api/books/${id}`);
 }
 
-export function updateBook(id: number, patch: { title: string }) {
+export function updateBook(id: number, patch: BookUpdate) {
   return api.patch<BookOut>(`/api/books/${id}`, { body: { ...patch } });
 }
 

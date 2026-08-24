@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
 
 import type { TagOut } from "../api/tags";
+import { AskPanel } from "../features/library/AskPanel";
 import { BookGrid } from "../features/library/BookGrid";
+import { RecentBooks } from "../features/library/RecentBooks";
 import { SearchBar } from "../features/library/SearchBar";
 import { TagSidebar } from "../features/library/TagSidebar";
 import { UploadDropzone } from "../features/library/UploadDropzone";
@@ -94,6 +96,8 @@ export default function LibraryPage() {
           mode={filters.mode}
           onChange={(patch) => update(patch)}
         />
+        <AskPanel />
+        <RecentBooks />
         <UploadDropzone />
         <BookGrid books={displayed} allTags={allTags} isLoading={isLoading} isError={isError} />
       </div>

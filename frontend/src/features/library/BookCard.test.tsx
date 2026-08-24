@@ -33,11 +33,11 @@ function renderCard(b: BookOut) {
 }
 
 describe("BookCard", () => {
-  it("links to the reader when status is ready", () => {
+  it("links to the details page when status is ready", () => {
     renderCard(book());
     const links = screen.getAllByRole("link");
     expect(links.length).toBeGreaterThan(0);
-    expect(links[0]).toHaveAttribute("href", "/read/7");
+    expect(links[0]).toHaveAttribute("href", "/book/7");
   });
 
   it("shows the ingest badge while pending and disables the link", () => {

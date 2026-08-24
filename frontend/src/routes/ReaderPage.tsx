@@ -2,6 +2,9 @@ import { Suspense, lazy, useCallback, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { BookmarkDrawer } from "../features/reader/BookmarkDrawer";
+import { TagsEditDialog } from "../features/library/TagsEditDialog";
+import { useAttachTag, useDetachTag } from "../features/library/hooks/useBookActions";
+import { useTags } from "../features/library/hooks/useTags";
 import { useBook } from "../features/reader/hooks/useBook";
 import { useBookmarks, useCreateBookmark } from "../features/reader/hooks/useBookmarks";
 
@@ -26,6 +29,12 @@ export default function ReaderPage() {
   const progress = useProgress(bookId);
   const [page, setPage] = useState<number | null>(null);
   const [jumpTarget, setJumpTarget] = useState<number | null>(null);
+  const [editingTags, setEditingTags] = useState(false);
+
+  const { data: tagCounts = [] } = useTags();
+  const allTags = tagCounts.map((tc) => tc.tag);
+  const attach = useAttachTag();
+  const detach = useDetachTag();
 
   const currentPage = page ?? progress.data?.page_no ?? 1;
   useDebouncedProgress(bookId, currentPage);
@@ -110,6 +119,13 @@ export default function ReaderPage() {
                 {tag.name}
               </button>
             ))}
+            <button
+              type="button"
+              className={styles.editTags}
+              onClick={() => setEditingTags(true)}
+            >
+              Editar tags
+            </button>
           </div>
         </header>
         <Suspense fallback={<p className={styles.loading}>Loading viewer…</p>}>
@@ -124,6 +140,18 @@ export default function ReaderPage() {
           setPage(target);
         }}
       />
+      {editingTags && (
+        <TagsEditDialog
+          book={book.data}
+          allTags={allTags}
+          isPending={attach.isPending || detach.isPending}
+          onClose={() => setEditingTags(false)}
+          onToggle={(tag, attached) => {
+            if (attached) detach.mutate({ bookId, tagId: tag.id });
+            else attach.mutate({ bookId, tagId: tag.id });
+          }}
+        />
+      )}
     </div>
   );
 }

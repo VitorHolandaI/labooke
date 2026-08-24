@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import type { Schemas } from "../../api/client";
+import { randomTagColor } from "./randomColor";
 import styles from "./CreateTagForm.module.css";
 
 function toSlug(name: string): string {
@@ -17,7 +18,7 @@ interface Props {
 
 export function CreateTagForm({ isPending, onSubmit }: Props) {
   const [name, setName] = useState("");
-  const [color, setColor] = useState("#888888");
+  const [color, setColor] = useState(randomTagColor);
 
   const trimmed = name.trim();
   const canSubmit = trimmed.length > 0 && !isPending;
@@ -27,7 +28,7 @@ export function CreateTagForm({ isPending, onSubmit }: Props) {
     if (!canSubmit) return;
     onSubmit({ name: trimmed, slug: toSlug(trimmed), color });
     setName("");
-    setColor("#888888");
+    setColor(randomTagColor());
   }
 
   return (
@@ -47,6 +48,15 @@ export function CreateTagForm({ isPending, onSubmit }: Props) {
         aria-label="Tag color"
         title="Tag color"
       />
+      <button
+        type="button"
+        className={styles.shuffleBtn}
+        onClick={() => setColor(randomTagColor())}
+        aria-label="Random color"
+        title="Random color"
+      >
+        Random
+      </button>
       <button className={styles.btn} type="submit" disabled={!canSubmit}>
         {isPending ? "Adding…" : "Add tag"}
       </button>

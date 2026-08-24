@@ -10,7 +10,7 @@ describe("CreateTagForm", () => {
     expect(screen.getByRole("button", { name: /add tag/i })).toBeDisabled();
   });
 
-  it("calls onSubmit with name, auto-generated slug, and default color", async () => {
+  it("calls onSubmit with name, auto-generated slug, and a palette color", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
     render(<CreateTagForm onSubmit={onSubmit} />);
@@ -19,7 +19,7 @@ describe("CreateTagForm", () => {
     expect(onSubmit).toHaveBeenCalledWith({
       name: "Sci Fi",
       slug: "sci-fi",
-      color: "#888888",
+      color: expect.stringMatching(/^#[0-9a-f]{6}$/),
     });
   });
 

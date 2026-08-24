@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import type { TagOut } from "../../api/tags";
 import { Modal } from "../library/Modal";
+import { randomTagColor } from "./randomColor";
 import modalStyles from "../library/Modal.module.css";
 
 interface Props {
@@ -38,12 +39,21 @@ export function EditTagDialog({ tag, isPending, errorMessage, onSubmit, onClose 
           autoFocus
         />
         <label htmlFor="edit-tag-color">Color</label>
-        <input
-          id="edit-tag-color"
-          type="color"
-          value={color}
-          onChange={(e) => setColor(e.target.value)}
-        />
+        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          <input
+            id="edit-tag-color"
+            type="color"
+            value={color}
+            onChange={(e) => setColor(e.target.value)}
+          />
+          <button
+            type="button"
+            className={modalStyles.btn}
+            onClick={() => setColor(randomTagColor())}
+          >
+            Random
+          </button>
+        </div>
         {errorMessage && <p className={modalStyles.danger}>{errorMessage}</p>}
         <div className={modalStyles.actions}>
           <button type="button" className={modalStyles.btn} onClick={onClose}>

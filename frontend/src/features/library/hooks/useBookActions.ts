@@ -6,6 +6,7 @@ import {
   detachBookTag,
   reembedBook,
   updateBook,
+  type BookUpdate,
 } from "../../../api/books";
 
 function useInvalidate() {
@@ -20,7 +21,7 @@ function useInvalidate() {
 export function useUpdateBook() {
   const invalidate = useInvalidate();
   return useMutation({
-    mutationFn: ({ id, title }: { id: number; title: string }) => updateBook(id, { title }),
+    mutationFn: ({ id, ...patch }: { id: number } & BookUpdate) => updateBook(id, patch),
     onSuccess: invalidate,
   });
 }

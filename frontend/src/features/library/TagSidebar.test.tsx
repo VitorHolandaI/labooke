@@ -72,4 +72,14 @@ describe("TagSidebar", () => {
     await user.click(screen.getByRole("button", { name: "ANY" }));
     expect(onTagModeChange).toHaveBeenCalledWith("any");
   });
+
+  it("filters tags by the search input", async () => {
+    server.use(http.get("*/api/tags", () => HttpResponse.json(mockTags)));
+    const user = userEvent.setup();
+    setup();
+    await waitFor(() => expect(screen.getByText("fiction")).toBeInTheDocument());
+    await user.type(screen.getByRole("searchbox", { name: /filter tags/i }), "tech");
+    expect(screen.queryByText("fiction")).toBeNull();
+    expect(screen.getByText("tech")).toBeInTheDocument();
+  });
 });

@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import { useTags } from "./hooks/useTags";
 import type { LibraryFilters } from "./hooks/useLibraryFilters";
 import styles from "./TagSidebar.module.css";
@@ -12,6 +14,7 @@ interface Props {
 
 export function TagSidebar({ filters, onToggle, onTagModeChange, mobileOpen, onMobileClose }: Props) {
   const { data, isLoading, isError } = useTags();
+  const [query, setQuery] = useState("");
 
   const sidebarClass = [
     styles.sidebar,
@@ -20,6 +23,11 @@ export function TagSidebar({ filters, onToggle, onTagModeChange, mobileOpen, onM
 
   if (isLoading) return <aside className={sidebarClass}>Loading tags…</aside>;
   if (isError || !data) return <aside className={sidebarClass}>Could not load tags.</aside>;
+
+  const needle = query.trim().toLowerCase();
+  const visibleTags = needle
+    ? data.filter(({ tag }) => tag.name.toLowerCase().includes(needle))
+    : data;
 
   return (
     <aside className={sidebarClass} aria-label="Tag filters">
@@ -54,9 +62,17 @@ export function TagSidebar({ filters, onToggle, onTagModeChange, mobileOpen, onM
           )}
         </div>
       </header>
+      <input
+        type="search"
+        className={styles.search}
+        placeholder="Filter tags…"
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        aria-label="Filter tags"
+      />
       <p className={styles.hint}>Click to include · Alt-click to exclude.</p>
       <ul className={styles.list}>
-        {data.map(({ tag, count }) => {
+        {visibleTags.map(({ tag, count }) => {
           const included = filters.tags.includes(tag.id);
           const excluded = filters.exclude.includes(tag.id);
           const cls = excluded ? styles.excluded : included ? styles.included : styles.tag;

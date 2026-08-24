@@ -1,11 +1,13 @@
+.panel {
+  margin-bottom: var(--space-5);
+}
+
 .form {
   display: flex;
   gap: var(--space-2);
-  align-items: center;
-  margin-bottom: var(--space-4);
 }
 
-.nameInput {
+.input {
   flex: 1;
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--color-border);
@@ -13,28 +15,6 @@
   background: var(--color-bg);
   color: var(--color-text);
   font: inherit;
-}
-
-.colorInput {
-  width: 36px;
-  height: 36px;
-  padding: 2px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-bg);
-  cursor: pointer;
-}
-
-.shuffleBtn {
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-bg);
-  color: var(--color-text);
-  font: inherit;
-  font-size: 0.85rem;
-  cursor: pointer;
-  white-space: nowrap;
 }
 
 .btn {
@@ -51,4 +31,36 @@
 .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.answer {
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+.text {
+  margin: 0 0 var(--space-2);
+  line-height: 1.5;
+}
+
+.books {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.books a {
+  color: var(--color-accent);
+}
+
+.error {
+  color: var(--color-danger);
+  font-size: 0.85rem;
+  margin: var(--space-2) 0 0;
 }

@@ -59,7 +59,7 @@ export function BookCard({ book, allTags }: Props) {
   return (
     <article className={styles.card} aria-busy={!isReady}>
       <div className={styles.coverWrap}>
-        {isReady ? <Link to={`/read/${book.id}`}>{cover}</Link> : cover}
+        {isReady ? <Link to={`/book/${book.id}`}>{cover}</Link> : cover}
         {statusLabel && (
           <span className={book.status === "failed" ? styles.badgeError : styles.badge}>
             {statusLabel}
@@ -77,7 +77,7 @@ export function BookCard({ book, allTags }: Props) {
       </div>
       <div className={styles.meta}>
         <h3 className={styles.title} title={book.title}>
-          {isReady ? <Link to={`/read/${book.id}`}>{book.title}</Link> : book.title}
+          {isReady ? <Link to={`/book/${book.id}`}>{book.title}</Link> : book.title}
         </h3>
         {book.author && <p className={styles.author}>{book.author}</p>}
         {book.tags.length > 0 && (

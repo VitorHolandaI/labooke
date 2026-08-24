@@ -454,6 +454,10 @@ export interface components {
             title: string;
             /** Author */
             author: string | null;
+            /** Description */
+            description: string | null;
+            /** Rag Text */
+            rag_text: string | null;
             /** Format */
             format: string;
             /** Page Count */
