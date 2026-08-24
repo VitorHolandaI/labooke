@@ -64,6 +64,9 @@ Busca e navegação da biblioteca pelo terminal.
 | [docs/reader.md](docs/reader.md)       | Leitor, tela cheia, bookmarks     |
 | [docs/search.md](docs/search.md)       | Busca por título, semântica, tags |
 | [docs/api.md](docs/api.md)             | Endpoints HTTP                    |
+| [docs/models.md](docs/models.md)       | Modelos de domínio                |
+| [docs/database.md](docs/database.md)   | Banco, tabelas, migrations        |
+| [docs/ask.md](docs/ask.md)             | LLM: resumo + "pergunte à biblioteca" |
 | [docs/frontend.md](docs/frontend.md)   | Estrutura do frontend             |
 | [docs/docker.md](docs/docker.md)       | Docker, env vars, RAM             |
 | [docs/bible.md](docs/bible.md)         | CLI bible: comandos, pager, lazy loading |

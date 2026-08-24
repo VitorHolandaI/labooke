@@ -34,6 +34,9 @@ Upload / pasta inbox
 | [reader.md](reader.md)         | Leitor: modos, tela cheia, bookmarks  |
 | [search.md](search.md)         | Busca por título, semântica e tags    |
 | [api.md](api.md)               | Endpoints HTTP                        |
+| [models.md](models.md)         | Modelos de domínio (Pydantic)         |
+| [database.md](database.md)     | Estrutura do banco, tabelas, migrations |
+| [ask.md](ask.md)               | LLM: resumo de livro e "pergunte"     |
 | [frontend.md](frontend.md)     | Estrutura do frontend                 |
 | [docker.md](docker.md)         | Docker, env vars, RAM                 |
 | [migracao.md](migracao.md)     | Migração, backup e recuperação        |

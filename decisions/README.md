@@ -26,3 +26,4 @@ Format per file:
 | [0012](0012-pyquality-as-gate.md) | Code quality verified via `tools/pyquality.py` | accepted |
 | [0013](0013-cli-deferred-after-web.md) | Bible CLI ships only after web is complete | accepted |
 | [0014](0014-folder-scan-ingest.md) | Folder-scan ingest as a second upload path | accepted |
+| [0015](0015-llm-summarize-ask.md) | LLM summarize + ask via thin OpenAI-compatible client | accepted |

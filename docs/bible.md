@@ -11,7 +11,7 @@ padrão `http://localhost:8000`) — não conecta direto ao banco.
 |---|---|
 | `bible books [--tag slug]` | Lista livros com ID, formato e tags |
 | `bible tags` | Lista tags com contagem de livros |
-| `bible search <query>` | Busca semântica (padrão) ou lexical (`--lexical`) |
+| `bible search <query>` | Busca via LLM/ask (padrão) ou lexical (`--lexical`) |
 | `bible read <id> [-p N]` | Abre o pager TUI na página N (padrão 1) |
 | `bible tag <id> +slug -slug` | Adiciona/remove tags de um livro |
 | `bible scan` | Dispara ingestão da pasta de import |
@@ -58,6 +58,11 @@ bible books
 ## Histórico
 
 Cada busca (`search` / `last`) é gravada em `$LABOOKE_DATA_DIR/bible_history.txt`.
+
+`bible search` sem `--lexical` chama `POST /api/ask`: o LLM reformula a
+pergunta, o RAG busca nos resumos (`rag_text`) e imprime a resposta em
+prosa + livros recomendados. `--tag` filtra os recomendados no cliente.
+Requer LLM configurado (ver [ask.md](ask.md)).
 
 → Ver [running.md](running.md) para como iniciar o servidor.
 → Ver [search.md](search.md) para detalhes dos modos de busca.
