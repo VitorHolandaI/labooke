@@ -27,9 +27,17 @@ def list_books(
     tag_mode: Literal["all", "any"] = "all",
     exclude: Annotated[Sequence[int], Query()] = (),
     q: str | None = None,
+    sort: Literal["id", "recent"] = "id",
 ) -> BookListOut:
-    """List library books, filtered by tags and/or a lexical query."""
-    books = library.list_books(tags=tags, tag_mode=tag_mode, exclude=exclude, q=q)
+    """List library books, filtered by tags and/or a lexical query.
+
+    ``sort=recent`` orders by last-read time (descending) using saved
+    reading progress.
+    """
+    if sort == "recent":
+        books = library.recent_books()
+    else:
+        books = library.list_books(tags=tags, tag_mode=tag_mode, exclude=exclude, q=q)
     return BookListOut(items=[BookOut.from_domain(book) for book in books])
 
 
@@ -41,8 +49,16 @@ def get_book(book_id: int, library: LibraryDep) -> BookOut:
 
 @router.patch("/{book_id}", response_model=BookOut)
 def update_book(book_id: int, body: BookUpdate, library: LibraryDep) -> BookOut:
-    """Rename a book and return it with attached tags."""
-    return BookOut.from_domain(library.rename_book(book_id, body.title))
+    """Update title, author, and/or description; missing fields are kept."""
+    book = library.get_book(book_id)
+    fields = body.model_fields_set
+    if "title" in fields and body.title is not None:
+        book = library.rename_book(book_id, body.title)
+    if "author" in fields:
+        book = library.update_author(book_id, body.author)
+    if "description" in fields:
+        book = library.update_description(book_id, body.description)
+    return BookOut.from_domain(book)
 
 
 @router.delete("/{book_id}", status_code=status.HTTP_204_NO_CONTENT)

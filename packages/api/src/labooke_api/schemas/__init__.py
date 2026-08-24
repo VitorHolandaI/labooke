@@ -1,6 +1,14 @@
 """HTTP request and response schemas for the labooke API."""
 
-from labooke_api.schemas.admin import ScanResultOut
+from labooke_api.schemas.admin import (
+    AdminConfigUpdate,
+    InvalidateSummariesOut,
+    ScanResultOut,
+    SummarizeBatchOut,
+    SummarizeBatchRequest,
+    SummarizeRandomRequest,
+)
+from labooke_api.schemas.ask import AskRequest, AskResponse
 from labooke_api.schemas.bookmarks import BookmarkCreate, BookmarkOut, BookmarkUpdateNote
 from labooke_api.schemas.books import (
     BookCreateResponse,
@@ -22,6 +30,9 @@ from labooke_api.schemas.tags import (
 )
 
 __all__ = [
+    "AdminConfigUpdate",
+    "AskRequest",
+    "AskResponse",
     "BookCreateResponse",
     "BookListOut",
     "BookOut",
@@ -31,6 +42,7 @@ __all__ = [
     "BookmarkOut",
     "BookmarkUpdateNote",
     "ErrorOut",
+    "InvalidateSummariesOut",
     "PageTextOut",
     "ProgressOut",
     "ProgressUpdate",
@@ -38,6 +50,9 @@ __all__ = [
     "SearchGroupOut",
     "SearchHitOut",
     "SearchResponse",
+    "SummarizeBatchOut",
+    "SummarizeBatchRequest",
+    "SummarizeRandomRequest",
     "TagCountOut",
     "TagCreate",
     "TagMergeRequest",

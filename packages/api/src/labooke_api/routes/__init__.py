@@ -11,6 +11,7 @@ from fastapi import FastAPI
 from labooke_api.routes import admin as admin_routes
 from labooke_api.routes import bookmarks as bookmarks_routes
 from labooke_api.routes import books as books_routes
+from labooke_api.routes import llm as llm_routes
 from labooke_api.routes import progress as progress_routes
 from labooke_api.routes import reader as reader_routes
 from labooke_api.routes import search as search_routes
@@ -33,3 +34,4 @@ def register_routes(app: FastAPI) -> None:
     app.include_router(search_routes.router)
     app.include_router(upload_routes.router)
     app.include_router(admin_routes.router)
+    app.include_router(llm_routes.router)

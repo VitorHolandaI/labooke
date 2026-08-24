@@ -8,7 +8,11 @@ from labooke_core.config import Settings
 
 
 def test_cors_off_by_default(tmp_path):
-    settings = Settings(data_dir=tmp_path / "data", import_dir=tmp_path / "inbox")
+    settings = Settings(
+        data_dir=tmp_path / "data",
+        import_dir=tmp_path / "inbox",
+        cors_origins=[],
+    )
     app = create_app(settings=settings)
     with TestClient(app) as client:
         response = client.get(

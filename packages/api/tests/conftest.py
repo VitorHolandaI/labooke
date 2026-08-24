@@ -29,7 +29,14 @@ class FakePipeline:
 
 
 def _make_settings(tmp_path: Path) -> Settings:
-    return Settings(data_dir=tmp_path / "data", import_dir=tmp_path / "inbox")
+    return Settings(
+        data_dir=tmp_path / "data",
+        import_dir=tmp_path / "inbox",
+        # hermético: ignora um .env local que ligue LLM ou CORS
+        cors_origins=[],
+        llm_base_url="",
+        llm_model="",
+    )
 
 
 @pytest.fixture

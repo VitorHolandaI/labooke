@@ -13,6 +13,7 @@ from typing import Annotated
 from fastapi import BackgroundTasks, Depends, Request
 from labooke_core.config import Settings
 from labooke_core.services import (
+    AskService,
     IngestService,
     LibraryScanner,
     LibraryService,
@@ -20,6 +21,7 @@ from labooke_core.services import (
     ReembedService,
     SearchService,
     SnippetService,
+    SummarizeService,
 )
 from labooke_core.services.common import TaskRunner
 from labooke_core.store.bookmarks_repo import BookmarksRepo
@@ -84,6 +86,16 @@ def get_search_service(container: ContainerDep) -> SearchService:
     return container.search
 
 
+def get_summarize_service(container: ContainerDep) -> SummarizeService:
+    """Return the shared ``SummarizeService``."""
+    return container.summarize
+
+
+def get_ask_service(container: ContainerDep) -> AskService:
+    """Return the shared ``AskService``."""
+    return container.ask
+
+
 def _background_runner(tasks: BackgroundTasks) -> TaskRunner:
     """Adapt FastAPI ``BackgroundTasks`` to the core ``TaskRunner`` shape."""
 
@@ -116,6 +128,7 @@ def get_reembed_service(
     return ReembedService(
         container.books,
         container.pipeline,
+        container.summaries,
         schedule_task=_background_runner(background_tasks),
     )
 
@@ -124,5 +137,5 @@ def get_library_scanner(
     container: ContainerDep,
     ingest: Annotated[IngestService, Depends(get_ingest_service)],
 ) -> LibraryScanner:
-    """Build a per-request ``LibraryScanner`` using the same ingest pipeline."""
+    """Build a per-request ``LibraryScanner`` with the same ingest pipeline."""
     return LibraryScanner(container.settings, ingest)

@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from labooke_core import __version__ as core_version
 from labooke_core.config import Settings
@@ -14,6 +14,7 @@ from labooke_api.container import AppContainer, build_container
 from labooke_api.errors import register_error_handlers
 from labooke_api.logging import register_logging
 from labooke_api.routes import register_routes
+from labooke_api.schemas import AdminConfigUpdate
 
 
 def _register_cors(app: FastAPI, settings: Settings) -> None:
@@ -30,6 +31,7 @@ def _register_cors(app: FastAPI, settings: Settings) -> None:
 
 
 def _lifespan_factory(settings: Settings, container: AppContainer | None):
+    """Build the lifespan callable that owns the shared container."""
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         """Open shared resources before serving and release them after."""
@@ -78,12 +80,40 @@ def create_app(
         return {"status": "ok", "core": core_version}
 
     @app.get("/api/config")
-    def config() -> dict[str, str | int]:
+    def config(request: Request) -> dict[str, str | int | bool]:
         """Return runtime configuration so the frontend can display it."""
+        container = getattr(request.app.state, "container", None)
+        stored_pages = None
+        if container is not None:
+            stored_pages = container.settings_repo.get("llm_summary_pages")
         return {
             "embed_model": resolved_settings.embed_model,
             "chunk_pages": resolved_settings.chunk_pages,
             "data_dir": str(resolved_settings.data_dir),
+            "llm_summary_pages": int(
+                stored_pages or resolved_settings.llm_summary_pages
+            ),
+            "llm_model": resolved_settings.llm_model,
+            "llm_enabled": resolved_settings.llm_enabled,
+        }
+
+    @app.put("/api/admin/config")
+    def update_config(
+        body: AdminConfigUpdate, request: Request
+    ) -> dict[str, int]:
+        """Persist runtime config overrides from the Admin page."""
+        container = request.app.state.container
+        if body.llm_summary_pages is not None:
+            container.settings_repo.set(
+                "llm_summary_pages", str(body.llm_summary_pages)
+            )
+        else:
+            container.settings_repo.set("llm_summary_pages", "")
+        stored = container.settings_repo.get("llm_summary_pages")
+        return {
+            "llm_summary_pages": int(
+                stored or resolved_settings.llm_summary_pages
+            ),
         }
 
     return app

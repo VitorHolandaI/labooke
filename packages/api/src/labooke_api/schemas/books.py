@@ -15,6 +15,8 @@ class BookOut(BaseModel):
     sha256: str
     title: str
     author: str | None
+    description: str | None
+    rag_text: str | None
     format: str
     page_count: int
     status: str
@@ -29,6 +31,8 @@ class BookOut(BaseModel):
             sha256=book.sha256,
             title=book.title,
             author=book.author,
+            description=book.description,
+            rag_text=book.rag_text,
             format=book.format,
             page_count=book.page_count,
             status=book.status.value,
@@ -57,6 +61,12 @@ class BookTagAttach(BaseModel):
 
 
 class BookUpdate(BaseModel):
-    """Body for ``PATCH /api/books/{id}``."""
+    """Body for ``PATCH /api/books/{id}``.
 
-    title: str = Field(min_length=1, max_length=500)
+    Only fields present in the request body are updated; an explicit
+    ``null`` clears ``author`` or ``description``.
+    """
+
+    title: str | None = Field(default=None, min_length=1, max_length=500)
+    author: str | None = None
+    description: str | None = None
