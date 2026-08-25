@@ -6,7 +6,7 @@
 
 | Formato | Viewer     | Notas                        |
 |---------|------------|------------------------------|
-| PDF     | pdf.js     | Escala ao container, rápido  |
+| PDF     | pdf.js     | Texto selecionável e busca interna |
 | EPUB    | epub.js    | Fluxo de texto reflowable    |
 | TXT/MD  | próprio    | Paginação por linhas         |
 
@@ -18,11 +18,23 @@ Barra de controles (topo):
 |-----------------|-------------------------------------------|
 | ← Prev / Next → | Página anterior / próxima                |
 | contador        | `12 / 300` ou `12–13 / 300` (2 páginas)  |
+| Ir              | Abre uma página pelo número              |
 | ☆ Marcar        | Adiciona bookmark na página atual         |
 | ⊟ 2 pág.        | Alterna entre 1 e 2 páginas lado a lado   |
 | ⛶ Tela cheia    | Cobre o viewport inteiro (esconde navbar) |
 
 **Teclas:** ← → ↑ ↓ navegam. `Esc` sai da tela cheia.
+
+## Busca e seleção no PDF
+
+- A camada de texto do pdf.js fica alinhada sobre o canvas: arraste para
+  selecionar e copiar texto como em um EPUB.
+- Digite uma palavra em **Buscar palavra no PDF** e pressione `Enter` ou
+  **Buscar**. A busca ignora maiúsculas e acentos.
+- O resultado informa ocorrências e páginas. Use ↑/↓ para navegar; os trechos
+  visíveis ficam destacados em amarelo.
+- PDFs compostos apenas por imagens não possuem texto pesquisável ou
+  selecionável; esses arquivos precisam passar por OCR antes da importação.
 
 ## Tela cheia
 
