@@ -47,7 +47,7 @@ def test_insert_then_knn_finds_chunk(books, chunks, vectors):
 
 def test_insert_rejects_wrong_dimension(books, chunks, vectors):
     _, chunk = make_chunk(books, chunks)
-    with pytest.raises(ValueError, match="expected 384"):
+    with pytest.raises(ValueError, match=f"expected {VEC_DIM}"):
         vectors.insert(chunk_id=chunk.id, vector=[0.1] * 100)
 
 

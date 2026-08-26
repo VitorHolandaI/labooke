@@ -59,10 +59,10 @@ bible books
 
 Cada busca (`search` / `last`) é gravada em `$LABOOKE_DATA_DIR/bible_history.txt`.
 
-`bible search` sem `--lexical` chama `POST /api/ask`: o LLM reformula a
-pergunta, o RAG busca nos resumos (`rag_text`) e imprime a resposta em
-prosa + livros recomendados. `--tag` filtra os recomendados no cliente.
-Requer LLM configurado (ver [ask.md](ask.md)).
+`bible search` usa por padrão `GET /api/search?mode=hybrid`: KNN semântico
+nos chunks dos livros + BM25, combinados por RRF. `--lexical` limita a busca
+a título/filename. Os filtros de tag são aplicados no servidor. Esse fluxo
+não requer LLM; a recomendação por descrições fica na interface web.
 
 → Ver [running.md](running.md) para como iniciar o servidor.
 → Ver [search.md](search.md) para detalhes dos modos de busca.

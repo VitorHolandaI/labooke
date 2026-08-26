@@ -6,15 +6,15 @@
 |---|---|---|
 | Lexical | O(n) | varre todos os n livros |
 | BM25 / FTS5 | O(log V + P) | P = docs que contêm o termo |
-| Semântico (KNN exato) | O(C × 384) | C = total de chunks na whitelist |
-| Híbrido | O(C × 384 + P) | dominado pelo semântico |
+| Semântico (KNN exato) | O(C × 1024) | C = total de chunks na whitelist |
+| Híbrido | O(C × 1024 + P) | dominado pelo semântico |
 
 **V** = tamanho do vocabulário, **P** = posting list do termo, **C** = chunks elegíveis.
 
 ## Pior caso do KNN
 
 O top-k não reduz o trabalho de computação — só reduz memória (heap de k elementos).
-No pior caso o chunk mais próximo é o último calculado, então todos os C × 384
+No pior caso o chunk mais próximo é o último calculado, então todos os C × 1024
 produtos internos são inevitáveis. Com filtro de tags, C cai para os chunks dos
 livros que passaram o filtro.
 

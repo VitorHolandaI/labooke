@@ -457,7 +457,6 @@ export interface components {
             /** Description */
             description: string | null;
             /** Rag Text */
-            rag_text: string | null;
             /** Format */
             format: string;
             /** Page Count */

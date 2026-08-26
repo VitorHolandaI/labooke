@@ -82,9 +82,7 @@ function BookDetailsEditor({ book }: { book: BookOut }) {
         </button>
       </div>
       {(update.isError || summarize.isError) && (
-        <p className={styles.error}>
-          {update.error?.message ?? summarize.error?.message}
-        </p>
+        <p className={styles.error}>{update.error?.message ?? summarize.error?.message}</p>
       )}
     </section>
   );
@@ -107,8 +105,7 @@ export default function BookPage() {
   const detach = useDetachTag();
 
   if (book.isLoading) return <p className={styles.loading}>Loading…</p>;
-  if (book.isError || !book.data)
-    return <p className={styles.error}>Failed to load book.</p>;
+  if (book.isError || !book.data) return <p className={styles.error}>Failed to load book.</p>;
 
   const b = book.data;
 
@@ -123,9 +120,7 @@ export default function BookPage() {
             {b.format.toUpperCase()} · {b.page_count} páginas
           </p>
           {progress.data && (
-            <p className={styles.progress}>
-              Última leitura: página {progress.data.page_no}
-            </p>
+            <p className={styles.progress}>Última leitura: página {progress.data.page_no}</p>
           )}
           <div className={styles.actions}>
             <Link to={`/read/${b.id}`} className={styles.readBtn}>
@@ -155,19 +150,6 @@ export default function BookPage() {
       )}
 
       <BookDetailsEditor key={b.id} book={b} />
-
-      <details className={styles.ragSection}>
-        <summary className={styles.ragSummary}>
-          Texto RAG (usado na busca semântica)
-        </summary>
-        {b.rag_text ? (
-          <p className={styles.ragText}>{b.rag_text}</p>
-        ) : (
-          <p className={styles.ragEmpty}>
-            Ainda não gerado — clique em "Resumir com IA" acima.
-          </p>
-        )}
-      </details>
 
       {dialog === "rename" && (
         <RenameDialog

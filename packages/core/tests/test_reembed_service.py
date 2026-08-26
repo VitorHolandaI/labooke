@@ -17,6 +17,15 @@ class ConstantEncoder:
         return np.asarray(rows, dtype=np.float32)
 
 
+class RecordingEncoder(ConstantEncoder):
+    def __init__(self):
+        self.calls = []
+
+    def __call__(self, texts):
+        self.calls.append(list(texts))
+        return super().__call__(texts)
+
+
 def one_page_chunker(pages):
     return chunk_pages(pages, pages_per_chunk=1)
 
@@ -93,7 +102,7 @@ def test_reembed_book_updates_chunk_count_when_chunk_size_changes(tmp_path):
     assert conn.execute("SELECT COUNT(*) FROM vec_chunks").fetchone()[0] == 1
 
 
-def test_reembed_refreshes_summary_vector_from_rag_text(tmp_path):
+def test_reembed_refreshes_catalog_vector_from_title_and_description(tmp_path):
     conn = open_db(":memory:", seed_tags=False)
     books = BooksRepo(conn)
     chunks = ChunksRepo(conn)
@@ -103,7 +112,6 @@ def test_reembed_refreshes_summary_vector_from_rag_text(tmp_path):
     path.write_text("line 1\nline 2\nline 3", encoding="utf-8")
     book = books.insert(sha256="a", path=path, title="Sample", format="txt")
     books.update_description(book.id, "readable summary")
-    books.update_rag_text(book.id, "rag topics: A B C")
     pipeline = BookEmbeddingPipeline(
         books,
         chunks,
@@ -111,12 +119,14 @@ def test_reembed_refreshes_summary_vector_from_rag_text(tmp_path):
         encode_texts=ConstantEncoder(),
         page_chunker=one_page_chunker,
     )
-    service = ReembedService(books, pipeline, summaries)
+    summary_encoder = RecordingEncoder()
+    service = ReembedService(books, pipeline, summaries, encode_texts=summary_encoder)
     service.reembed_book(book.id)
     assert [book_id for book_id, _ in summaries.knn(query=[2.0] * VEC_DIM, k=5)] == [book.id]
+    assert summary_encoder.calls == [["Sample\nreadable summary"]]
 
 
-def test_reembed_uses_description_fallback_without_rag_text(tmp_path):
+def test_reembed_skips_catalog_vector_without_description(tmp_path):
     conn = open_db(":memory:", seed_tags=False)
     books = BooksRepo(conn)
     chunks = ChunksRepo(conn)
@@ -125,7 +135,6 @@ def test_reembed_uses_description_fallback_without_rag_text(tmp_path):
     path = tmp_path / "sample.txt"
     path.write_text("line 1\nline 2\nline 3", encoding="utf-8")
     book = books.insert(sha256="b", path=path, title="Sample", format="txt")
-    books.update_description(book.id, "fallback summary text")
     pipeline = BookEmbeddingPipeline(
         books,
         chunks,
@@ -134,4 +143,4 @@ def test_reembed_uses_description_fallback_without_rag_text(tmp_path):
         page_chunker=one_page_chunker,
     )
     ReembedService(books, pipeline, summaries).reembed_book(book.id)
-    assert len(summaries.knn(query=[2.0] * VEC_DIM, k=5)) == 1
+    assert summaries.knn(query=[2.0] * VEC_DIM, k=5) == []

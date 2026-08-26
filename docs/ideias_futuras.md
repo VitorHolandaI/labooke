@@ -72,6 +72,6 @@ Ideias maiores que valem discussão antes de implementar.
 
   - Geração de perfil: roda só na ingestão, pode ser lento (offline OK).
   - Busca por perfil: modelo precisa ficar em memória ou usar idle-shutdown
-    igual ao worker de embeddings atual. Ver `LABOOKE_EMBED_WORKER_IDLE_SECONDS`.
+    usando o endpoint Ollama configurável, como o pipeline de embeddings atual.
   - Alternativa leve: usar o próprio modelo de embeddings atual para embeddar
     o perfil em vez de rodar LLM na busca — trade-off qualidade × RAM.

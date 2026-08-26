@@ -8,6 +8,15 @@ from tests.conftest import FakeApiClient  # type: ignore[import-not-found]
 runner = CliRunner()
 
 
+def test_search_defaults_to_hybrid_passage_search(fake_client: FakeApiClient):
+    fake_client.add_book("Linux Kernel Dev", fmt="pdf")
+
+    result = runner.invoke(app, ["search", "linux"])
+
+    assert result.exit_code == 0
+    assert "Linux Kernel Dev" in result.output
+
+
 def test_search_empty_db_prints_no_results():
     result = runner.invoke(app, ["search", "linux", "--lexical"])
     assert result.exit_code == 0

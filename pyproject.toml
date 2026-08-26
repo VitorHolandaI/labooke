@@ -7,7 +7,6 @@ dependencies = [
     "labooke-core",
     "labooke-api",
     "labooke-bible",
-    "torch>=2.0,<2.7",
 ]
 
 [project.scripts]
@@ -20,13 +19,6 @@ members = ["packages/*"]
 labooke-core = { workspace = true }
 labooke-api = { workspace = true }
 labooke-bible = { workspace = true }
-torch = [{ index = "pytorch-cpu" }]
-
-[[tool.uv.index]]
-name = "pytorch-cpu"
-url = "https://download.pytorch.org/whl/cpu"
-explicit = true
-
 # ---------- ruff ----------
 [tool.ruff]
 line-length = 100

@@ -16,7 +16,6 @@ class BookOut(BaseModel):
     title: str
     author: str | None
     description: str | None
-    rag_text: str | None
     format: str
     page_count: int
     status: str
@@ -32,7 +31,6 @@ class BookOut(BaseModel):
             title=book.title,
             author=book.author,
             description=book.description,
-            rag_text=book.rag_text,
             format=book.format,
             page_count=book.page_count,
             status=book.status.value,

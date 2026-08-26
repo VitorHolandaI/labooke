@@ -5,7 +5,7 @@ with tag organization and semantic search. Lighter than Booklore
 (~250MB standby vs ~700MB).
 
 **Stack.** Python 3.12 + FastAPI + Pydantic v2 + sqlite-vec +
-sentence-transformers (`bge-small-en-v1.5`) on the backend; React +
+BGE-M3 embeddings served by Ollama; React +
 Vite + TypeScript + CSS Modules + TanStack Query on the frontend; uv
 workspace; Docker compose; Gitea Actions CI. A companion CLI `bible`
 (post-web) shares the `core` lib directly — no HTTP.

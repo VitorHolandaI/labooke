@@ -22,8 +22,7 @@ if TYPE_CHECKING:
     from labooke_core.store.db import LockedConnection
 
 _BOOK_COLUMNS = (
-    "id, sha256, path, title, author, description, rag_text, format, "
-    "page_count, status, ingest_error"
+    "id, sha256, path, title, author, description, format, page_count, status, ingest_error"
 )
 
 
@@ -36,11 +35,10 @@ def _row_to_book(row: sqlite3.Row | tuple) -> Book:
         title=row[3],
         author=row[4],
         description=row[5],
-        rag_text=row[6],
-        format=row[7],
-        page_count=row[8],
-        status=BookStatus(row[9]),
-        ingest_error=row[10],
+        format=row[6],
+        page_count=row[7],
+        status=BookStatus(row[8]),
+        ingest_error=row[9],
         tags=[],
     )
 
@@ -81,8 +79,7 @@ def _include_clause(tags: Sequence[int], tag_mode: str) -> tuple[str, list[objec
     placeholders = _placeholders(tags)
     if tag_mode == "any":
         return (
-            "b.id IN (SELECT book_id FROM book_tags WHERE tag_id IN "
-            f"({placeholders}))",
+            f"b.id IN (SELECT book_id FROM book_tags WHERE tag_id IN ({placeholders}))",
             list(tags),
         )
     if tag_mode == "all":
@@ -100,8 +97,7 @@ def _exclude_clause(exclude: Sequence[int]) -> tuple[str, list[object]]:
         return "", []
     placeholders = _placeholders(exclude)
     return (
-        "b.id NOT IN (SELECT book_id FROM book_tags WHERE tag_id IN "
-        f"({placeholders}))",
+        f"b.id NOT IN (SELECT book_id FROM book_tags WHERE tag_id IN ({placeholders}))",
         list(exclude),
     )
 
@@ -158,7 +154,6 @@ class BooksRepo:
         format: str,
         author: str | None = None,
         description: str | None = None,
-        rag_text: str | None = None,
         page_count: int = 0,
         status: BookStatus = BookStatus.PENDING,
     ) -> Book:
@@ -172,16 +167,14 @@ class BooksRepo:
         """
         cursor = self._conn.execute(
             "INSERT INTO books "
-            "(sha256, path, title, author, description, rag_text, format, "
-            "page_count, status) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "(sha256, path, title, author, description, format, page_count, status) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 sha256,
                 str(path),
                 title,
                 author,
                 description,
-                rag_text,
                 format,
                 page_count,
                 status.value,
@@ -234,9 +227,7 @@ class BooksRepo:
             >>> [book.title for book in repo.list_all()]
             ['A']
         """
-        rows = self._conn.execute(
-            f"SELECT {_BOOK_COLUMNS} FROM books ORDER BY id"
-        ).fetchall()
+        rows = self._conn.execute(f"SELECT {_BOOK_COLUMNS} FROM books ORDER BY id").fetchall()
         return [_row_to_book(r) for r in rows]
 
     def list_missing_description(self) -> list[Book]:
@@ -345,29 +336,7 @@ class BooksRepo:
             'A summary'
         """
         self.get(book_id)
-        self._conn.execute(
-            "UPDATE books SET description = ? WHERE id = ?", (description, book_id)
-        )
-        self._conn.commit()
-        return self.get(book_id)
-
-    def update_rag_text(self, book_id: int, rag_text: str | None) -> Book:
-        """Set or clear a book's retrieval text and return the refreshed row.
-
-        ``rag_text`` is the LLM-generated keyword-rich text embedded for
-        semantic retrieval (see ``SummarizeService``).
-
-        Example:
-            >>> from labooke_core.store.db import open_db
-            >>> repo = BooksRepo(open_db(":memory:", seed_tags=False))
-            >>> book = repo.insert(sha256="abc", path="/tmp/x.pdf", title="X", format="pdf")
-            >>> repo.update_rag_text(book.id, "topics: A, B").rag_text
-            'topics: A, B'
-        """
-        self.get(book_id)
-        self._conn.execute(
-            "UPDATE books SET rag_text = ? WHERE id = ?", (rag_text, book_id)
-        )
+        self._conn.execute("UPDATE books SET description = ? WHERE id = ?", (description, book_id))
         self._conn.commit()
         return self.get(book_id)
 

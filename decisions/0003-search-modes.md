@@ -2,6 +2,9 @@
 
 **Status:** amended
 
+The embedding implementation and dimensions were superseded by
+[0017](0017-bge-m3-via-ollama.md); the search-mode decision remains active.
+
 ## Context
 
 "Search" in a book app means several different things. Users want all of

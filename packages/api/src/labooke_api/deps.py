@@ -14,6 +14,7 @@ from fastapi import BackgroundTasks, Depends, Request
 from labooke_core.config import Settings
 from labooke_core.services import (
     AskService,
+    AutoTagService,
     IngestService,
     LibraryScanner,
     LibraryService,
@@ -96,6 +97,11 @@ def get_ask_service(container: ContainerDep) -> AskService:
     return container.ask
 
 
+def get_auto_tag_service(container: ContainerDep) -> AutoTagService:
+    """Return the shared ``AutoTagService``."""
+    return container.auto_tag
+
+
 def _background_runner(tasks: BackgroundTasks) -> TaskRunner:
     """Adapt FastAPI ``BackgroundTasks`` to the core ``TaskRunner`` shape."""
 
@@ -130,6 +136,7 @@ def get_reembed_service(
         container.pipeline,
         container.summaries,
         schedule_task=_background_runner(background_tasks),
+        encode_texts=container.ollama.encode_passages,
     )
 
 

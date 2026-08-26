@@ -17,31 +17,26 @@ Ajuste `API_PORT` se precisar expor a API em outra porta.
 
 ## Volumes
 
-| Volume   | Montado em                    | Conteúdo                       |
-|----------|-------------------------------|--------------------------------|
-| `data`   | `/data` (api)                 | SQLite, livros, covers, inbox  |
-| `models` | `/root/.cache/huggingface`    | Modelo de embeddings (~130 MB) |
+| Volume   | Montado em     | Conteúdo                      |
+|----------|----------------|--------------------------------|
+| `data`   | `/data` (api)  | SQLite, livros, covers, inbox  |
 
 ## Env vars principais
 
-| Variável                          | Padrão                   | Descrição                         |
-|-----------------------------------|--------------------------|-----------------------------------|
-| `LABOOKE_DATA_DIR`                | `./data`                 | Raiz dos dados                    |
-| `LABOOKE_IMPORT_DIR`              | `./data/inbox`           | Pasta de scan                     |
-| `LABOOKE_EMBED_MODEL`             | `BAAI/bge-small-en-v1.5` | Modelo HuggingFace                |
-| `LABOOKE_EMBED_CACHE_MODEL`       | `false` (docker)         | `true` = modelo em processo (dev) |
-| `LABOOKE_EMBED_WORKER_IDLE_SECONDS`| `60`                    | Worker desliga após N seg idle    |
-| `LABOOKE_CHUNK_PAGES`             | `1`                      | Páginas por chunk de embedding    |
-| `FRONTEND_PORT`                   | `8080`                   | Porta exposta no host (frontend)  |
-| `API_PORT`                        | `8010`                   | Porta exposta no host (API)       |
+| Variável                        | Padrão            | Descrição                              |
+|---------------------------------|-------------------|----------------------------------------|
+| `LABOOKE_DATA_DIR`              | `./data`          | Raiz dos dados                         |
+| `LABOOKE_IMPORT_DIR`            | `./data/inbox`    | Pasta de scan                          |
+| `LABOOKE_EMBED_BASE_URL`        | *(vazio)*         | URL raiz do Ollama para embeddings     |
+| `LABOOKE_EMBED_MODEL`           | `bge-m3`          | Modelo multilíngue no Ollama           |
+| `LABOOKE_EMBED_TIMEOUT_SECONDS` | `120`             | Timeout de embedding                   |
+| `LABOOKE_CHUNK_PAGES`           | `1`               | Páginas por chunk de embedding         |
+| `FRONTEND_PORT`                 | `8080`            | Porta exposta no host (frontend)       |
+| `API_PORT`                      | `8010`            | Porta exposta no host (API)            |
 
-## RAM (medido 2026-05-27)
+## Modelo de embeddings
 
-| Estado                        | API      | Frontend | Total    |
-|-------------------------------|----------|----------|----------|
-| Standby, sem worker           | 151.8 MB | 10.9 MB  | 162.7 MB |
-| Worker ativo (busca semântica)| 643.9 MB | 11.1 MB  | 655.0 MB |
-| Após idle shutdown do worker  | 161.9 MB | 11.1 MB  | 173.0 MB |
-
-`EMBED_CACHE_MODEL=false` isola o modelo em worker separado que desliga  
-após ocioso — mantém standby baixo. Ver [search.md](search.md) para detalhes.
+O BGE-M3 roda no Ollama externo; o container da API não carrega PyTorch nem
+pesos locais, então não há volume de modelos nem worker separado. O endpoint
+pode ser sobrescrito no Admin e volta ao valor do `.env` quando o override é
+removido. Ver [search.md](search.md).

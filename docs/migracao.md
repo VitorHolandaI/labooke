@@ -13,7 +13,7 @@
 | Bookmarks | `library.db` | deletar o registro |
 | Progresso de leitura | `library.db` | deletar o registro |
 | Covers (thumbnails) | `data/covers/` | deletar o arquivo de cover |
-| Modelo de embeddings | volume `models` | deletar o volume |
+| Modelo de embeddings | Ollama (externo) | remover o modelo do Ollama |
 
 ---
 
@@ -49,17 +49,12 @@ tar xzf ~/labooke-data.tar.gz
 docker compose up --build -d
 ```
 
-O modelo de embeddings (`models` volume) vai ser baixado novamente na primeira busca semântica (~130 MB). Se quiser evitar o download, copie o volume também:
+O modelo de embeddings roda no Ollama externo (`LABOOKE_EMBED_BASE_URL`), então
+não há volume local para copiar. Basta garantir que `bge-m3` esteja instalado
+no host do Ollama:
 
 ```bash
-# no servidor atual
-docker run --rm -v labooke_models:/data -v $(pwd):/backup \
-  alpine tar czf /backup/labooke-models.tar.gz -C /data .
-
-# no novo servidor (antes do docker compose up)
-docker volume create labooke_models
-docker run --rm -v labooke_models:/data -v $(pwd):/backup \
-  alpine tar xzf /backup/labooke-models.tar.gz -C /data
+ollama pull bge-m3
 ```
 
 ---
@@ -83,12 +78,15 @@ O scan re-ingesta e recria metadados, chunks e embeddings.
 
 ## Mudar modelo de embeddings
 
-Trocar `LABOOKE_EMBED_MODEL` no `.env` invalida todos os embeddings existentes
+Trocar `LABOOKE_EMBED_MODEL` invalida todos os embeddings existentes
 (dimensões ou espaço vetorial diferente). Após trocar:
 
 1. Atualiza `.env`
 2. `docker compose down && docker compose up --build -d`
 3. Admin → **Redo all embeddings** (reprocessa todos os livros)
+
+A migration do banco só recria as tabelas vetoriais vazias; ela **nunca** inicia
+o re-embed sozinha. O operador dispara explicitamente pela página Admin.
 
 > Isso pode demorar bastante dependendo do tamanho da biblioteca.
 

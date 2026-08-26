@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import {
+  autoTagBatch,
   invalidateSummaries,
   summarizeBatch,
   summarizeRandom,
@@ -21,17 +22,16 @@ export function AdminSummaries() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [confirmInvalidate, setConfirmInvalidate] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [tagging, setTagging] = useState(false);
 
-  const effectivePages = pages === null ? configPages : (Number(pages) || configPages);
+  const effectivePages = pages === null ? configPages : Number(pages) || configPages;
 
   const booksQuery = useBooks({});
-  const books = useMemo(
-    () => booksQuery.data?.items ?? [],
-    [booksQuery.data],
-  );
-  const missing = useMemo(
-    () => books.filter((b) => !b.description).length,
-    [books],
+  const books = useMemo(() => booksQuery.data?.items ?? [], [booksQuery.data]);
+  const missing = useMemo(() => books.filter((b) => !b.description).length, [books]);
+  const taggableIds = useMemo(
+    () => books.filter((book) => selected.has(book.id) && book.description).map((book) => book.id),
+    [books, selected],
   );
 
   const savePages = useMutation({
@@ -60,13 +60,18 @@ export function AdminSummaries() {
     onSuccess: () => setProcessing(selected.size > 0),
   });
 
+  const autoTag = useMutation({
+    mutationFn: () => autoTagBatch(taggableIds),
+    onSuccess: () => setTagging(taggableIds.length > 0),
+  });
+
   useEffect(() => {
-    if (!processing || missing === 0) return;
+    if ((!processing || missing === 0) && !tagging) return;
     const handle = window.setInterval(() => {
       void queryClient.invalidateQueries({ queryKey: ["books"] });
     }, 5000);
     return () => window.clearInterval(handle);
-  }, [processing, missing, queryClient]);
+  }, [processing, tagging, missing, queryClient]);
 
   function toggle(id: number) {
     setSelected((current) => {
@@ -89,9 +94,8 @@ export function AdminSummaries() {
     <div className={styles.card}>
       <h2 className={styles.cardTitle}>Resumos (LLM)</h2>
       <p className={styles.desc}>
-        O LLM lê as primeiras <strong>N páginas</strong> de cada livro e gera dois
-        textos: o resumo (exibido na página do livro) e o texto para busca semântica
-        (RAG). Livros com resumo aparecem marcados.
+        O LLM lê as primeiras <strong>N páginas</strong> e gera a descrição e o autor do livro. A
+        descrição também alimenta a recomendação e o tagueamento, que usa somente tags existentes.
       </p>
 
       <div className={styles.row}>
@@ -110,9 +114,7 @@ export function AdminSummaries() {
             aria-label="Páginas por resumo"
           />
         </label>
-        <span className={styles.result}>
-          {savePages.isPending ? "Salvando…" : "Salvo"}
-        </span>
+        <span className={styles.result}>{savePages.isPending ? "Salvando…" : "Salvo"}</span>
       </div>
 
       <div className={styles.row}>
@@ -154,6 +156,14 @@ export function AdminSummaries() {
         </button>
         <button
           type="button"
+          className={styles.btn}
+          onClick={() => autoTag.mutate()}
+          disabled={autoTag.isPending || taggableIds.length === 0 || !config.data?.llm_enabled}
+        >
+          {autoTag.isPending ? "Enviando…" : `Taguear com IA (${taggableIds.length})`}
+        </button>
+        <button
+          type="button"
           className={`${styles.btn} ${styles.btnDanger}`}
           onClick={() => setConfirmInvalidate(true)}
         >
@@ -168,9 +178,13 @@ export function AdminSummaries() {
         </p>
       )}
 
-      {random.isError && (
-        <p className={styles.error}>{random.error?.message ?? "Falhou."}</p>
+      {tagging && (
+        <p className={styles.result}>
+          Tagueamento iniciado no servidor. A lista atualiza automaticamente.
+        </p>
       )}
+
+      {random.isError && <p className={styles.error}>{random.error?.message ?? "Falhou."}</p>}
 
       <ul className={styles.bookList}>
         {books.map((book) => {
@@ -179,15 +193,16 @@ export function AdminSummaries() {
           return (
             <li key={book.id} className={styles.bookRow}>
               <label className={styles.bookLabel}>
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  onChange={() => toggle(book.id)}
-                />
+                <input type="checkbox" checked={checked} onChange={() => toggle(book.id)} />
                 <span className={hasSummary ? styles.summarized : styles.noSummary}>
                   {hasSummary ? "✓" : "✗"}
                 </span>
                 <span className={styles.bookTitle}>{book.title}</span>
+                {book.tags.length > 0 && (
+                  <span className={styles.bookTags}>
+                    {book.tags.map((tag) => tag.name).join(", ")}
+                  </span>
+                )}
               </label>
             </li>
           );
@@ -197,7 +212,7 @@ export function AdminSummaries() {
       {confirmInvalidate && (
         <ConfirmDialog
           title="Invalidar todos os resumos"
-          message="Apaga o resumo e o texto RAG de todos os livros. Você pode re-resumir depois em lotes."
+          message="Apaga as descrições geradas de todos os livros. Você pode re-resumir depois em lotes."
           confirmLabel="Invalidar tudo"
           danger
           isPending={invalidate.isPending}

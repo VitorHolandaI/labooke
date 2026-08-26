@@ -35,11 +35,11 @@ def test_cors_origins_ignores_blank_segments(monkeypatch):
     assert Settings().cors_origins == ["http://a", "http://b"]
 
 
-def test_embed_cache_model_can_be_disabled(monkeypatch):
-    monkeypatch.setenv("LABOOKE_EMBED_CACHE_MODEL", "false")
-    assert Settings().embed_cache_model is False
+def test_embed_endpoint_can_be_configured(monkeypatch):
+    monkeypatch.setenv("LABOOKE_EMBED_BASE_URL", "http://embedding.test")
+    assert Settings().embed_base_url == "http://embedding.test"
 
 
-def test_embed_worker_idle_seconds_can_be_configured(monkeypatch):
-    monkeypatch.setenv("LABOOKE_EMBED_WORKER_IDLE_SECONDS", "2.5")
-    assert Settings().embed_worker_idle_seconds == 2.5
+def test_embed_timeout_can_be_configured(monkeypatch):
+    monkeypatch.setenv("LABOOKE_EMBED_TIMEOUT_SECONDS", "2.5")
+    assert Settings().embed_timeout_seconds == 2.5

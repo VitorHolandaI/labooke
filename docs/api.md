@@ -50,9 +50,10 @@ Ambos retornam `503 llm_unavailable` se o LLM não estiver configurado.
 ### Admin (resumos em lote + config)
 | Método | Rota                              | Descrição                          |
 |--------|-----------------------------------|------------------------------------|
-| POST   | `/api/admin/summaries/invalidate` | Apaga resumo+rag_text+vetor de todos |
+| POST   | `/api/admin/summaries/invalidate` | Apaga descrições e vetores de catálogo |
 | POST   | `/api/admin/summaries/random`     | Sorteia N sem resumo e agenda (202) |
 | POST   | `/api/admin/summaries/batch`      | Agenda ids explícitos (202)         |
+| POST   | `/api/admin/tags/auto`            | Tagueia descrições com tags existentes (202) |
 | PUT    | `/api/admin/config`               | Sobrescreve `llm_summary_pages`     |
 
 ### Admin
@@ -62,4 +63,3 @@ Ambos retornam `503 llm_unavailable` se o LLM não estiver configurado.
 | POST   | `/api/admin/reembed-all` | Re-embebe todos os livros         |
 
 `GET /healthz` — healthcheck (usado pelo Docker).
-

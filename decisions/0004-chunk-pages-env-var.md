@@ -12,7 +12,7 @@ opposite. Different users / corpora benefit from different choices.
 
 Expose `LABOOKE_CHUNK_PAGES` as an environment variable (default `1`).
 One vector per page is the most precise setting and still tiny in
-storage (≈30 vectors for a 300-page book at 384-dim float32).
+storage (≈30 vectors for a 300-page book at 1024-dim float32).
 
 Changing the value affects only **new** ingests; existing books keep
 their original chunking until re-embedded.

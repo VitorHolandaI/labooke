@@ -34,7 +34,7 @@ export default function LibraryPage() {
     filters.mode === "semantic" && filters.q.trim()
       ? {
           q: filters.q,
-          mode: "semantic",
+          mode: "hybrid",
           tags: filters.tags.length ? filters.tags : undefined,
           exclude: filters.exclude.length ? filters.exclude : undefined,
           tag_mode: filters.tags.length ? filters.tag_mode : undefined,
@@ -91,11 +91,7 @@ export default function LibraryPage() {
             ? ` (${filters.tags.length + filters.exclude.length})`
             : ""}
         </button>
-        <SearchBar
-          q={filters.q}
-          mode={filters.mode}
-          onChange={(patch) => update(patch)}
-        />
+        <SearchBar q={filters.q} mode={filters.mode} onChange={(patch) => update(patch)} />
         <AskPanel />
         <RecentBooks />
         <UploadDropzone />

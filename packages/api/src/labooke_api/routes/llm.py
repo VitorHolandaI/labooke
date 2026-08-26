@@ -24,6 +24,6 @@ def summarize_book(book_id: int, summarize: SummarizeDep) -> BookOut:
 
 @router.post("/api/ask", response_model=AskResponse)
 def ask_library(body: AskRequest, ask: AskDep) -> AskResponse:
-    """Answer a natural-language question using the library's summaries."""
+    """Recommend library books matching a natural-language request."""
     result = ask.ask(body.question)
-    return AskResponse.from_domain(result.answer, result.books)
+    return AskResponse.from_domain(result)

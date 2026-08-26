@@ -12,10 +12,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from labooke_core.config import Settings
-from labooke_core.llm import ChatClient, build_chat_client
 from labooke_core.services import (
     AskService,
+    AutoTagService,
     LibraryService,
+    OllamaRuntime,
     ReaderService,
     SearchService,
     SnippetService,
@@ -54,9 +55,10 @@ class AppContainer:
     reader: ReaderService
     snippets: SnippetService
     search: SearchService
-    chat_client: ChatClient | None
+    ollama: OllamaRuntime
     summarize: SummarizeService
     ask: AskService
+    auto_tag: AutoTagService
 
     def close(self) -> None:
         """Close the owned SQLite connection."""
@@ -82,25 +84,44 @@ def build_container(settings: Settings) -> AppContainer:
     vectors = VectorsRepo(conn)
     summaries = SummariesRepo(conn)
     settings_repo = SettingsRepo(conn)
+    ollama = OllamaRuntime(settings, settings_repo)
     bookmarks = BookmarksRepo(conn)
     progress = ProgressRepo(conn)
     library = LibraryService(books, tags, progress)
     reader = ReaderService(books)
     snippets = SnippetService(books)
-    search = SearchService(library, chunks, vectors, snippets, books)
-    pipeline = BookEmbeddingPipeline(books, chunks, vectors)
-    chat_client = build_chat_client(settings)
+    search = SearchService(
+        library,
+        chunks,
+        vectors,
+        snippets,
+        books,
+        encode_texts=ollama.encode_queries,
+    )
+    pipeline = BookEmbeddingPipeline(
+        books,
+        chunks,
+        vectors,
+        encode_texts=ollama.encode_passages,
+    )
     summarize = SummarizeService(
         settings,
         books,
         summaries,
-        chat_client,
+        ollama.chat_client,
         pages_provider=lambda: int(
-            settings_repo.get("llm_summary_pages")
-            or settings.llm_summary_pages
+            settings_repo.get("llm_summary_pages") or settings.llm_summary_pages
         ),
+        encode_texts=ollama.encode_passages,
     )
-    ask = AskService(settings, library, summaries, chat_client)
+    ask = AskService(
+        settings,
+        library,
+        summaries,
+        ollama.chat_client,
+        encode_texts=ollama.encode_catalog_queries,
+    )
+    auto_tag = AutoTagService(books, tags, ollama.chat_client)
     return AppContainer(
         settings=settings,
         conn=conn,
@@ -117,7 +138,8 @@ def build_container(settings: Settings) -> AppContainer:
         reader=reader,
         snippets=snippets,
         search=search,
-        chat_client=chat_client,
+        ollama=ollama,
         summarize=summarize,
         ask=ask,
+        auto_tag=auto_tag,
     )

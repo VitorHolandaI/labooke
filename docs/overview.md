@@ -10,7 +10,7 @@ Organização por tags, busca semântica, leitor integrado, standby < 175 MB.
 | Camada     | Tecnologia                                              |
 |------------|---------------------------------------------------------|
 | Backend    | Python 3.12, FastAPI, Pydantic v2, SQLite + sqlite-vec  |
-| Embeddings | sentence-transformers (`BAAI/bge-small-en-v1.5`)        |
+| Embeddings | BGE-M3 via Ollama (`/api/embed`, 1024 dimensões)         |
 | Frontend   | React + Vite + TypeScript, CSS Modules, TanStack Query  |
 | Viewers    | pdf.js (PDF), epub.js (EPUB), renderer próprio (TXT/MD) |
 | Deploy     | docker compose — 2 containers no mesmo host             |

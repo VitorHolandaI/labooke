@@ -4,6 +4,12 @@ import { api } from "./client";
 export interface AskResponse {
   answer: string;
   books: BookOut[];
+  recommendations?: AskRecommendation[];
+}
+
+export interface AskRecommendation {
+  book: BookOut;
+  reason: string;
 }
 
 export function summarizeBook(bookId: number) {

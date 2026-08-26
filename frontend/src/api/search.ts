@@ -7,7 +7,7 @@ export type SearchHitOut = Schemas["SearchHitOut"];
 
 export interface SearchInput {
   q: string;
-  mode?: "semantic" | "lexical";
+  mode?: "semantic" | "lexical" | "hybrid";
   tags?: number[];
   tag_mode?: "all" | "any";
   exclude?: number[];

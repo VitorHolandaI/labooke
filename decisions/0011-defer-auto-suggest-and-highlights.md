@@ -2,6 +2,9 @@
 
 **Status:** accepted
 
+The embedding-based auto-suggest design was superseded by
+[0016](0016-llm-auto-tag-existing-vocabulary.md). Highlight deferral remains active.
+
 ## Context
 
 Both features were initially in scope for v1.

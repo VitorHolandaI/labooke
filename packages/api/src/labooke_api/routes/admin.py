@@ -5,14 +5,22 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends, status
-from labooke_core.services import LibraryScanner, ReembedService, SummarizeService
+from labooke_core.services import (
+    AutoTagService,
+    LibraryScanner,
+    ReembedService,
+    SummarizeService,
+)
 
 from labooke_api.deps import (
+    get_auto_tag_service,
     get_library_scanner,
     get_reembed_service,
     get_summarize_service,
 )
 from labooke_api.schemas import (
+    AutoTagBatchOut,
+    AutoTagBatchRequest,
     BookCreateResponse,
     InvalidateSummariesOut,
     ScanResultOut,
@@ -26,6 +34,7 @@ router = APIRouter(tags=["admin"])
 ReembedDep = Annotated[ReembedService, Depends(get_reembed_service)]
 ScannerDep = Annotated[LibraryScanner, Depends(get_library_scanner)]
 SummarizeDep = Annotated[SummarizeService, Depends(get_summarize_service)]
+AutoTagDep = Annotated[AutoTagService, Depends(get_auto_tag_service)]
 
 
 @router.post("/api/admin/scan", response_model=ScanResultOut)
@@ -92,3 +101,18 @@ def summarize_batch(
     """Schedule LLM summaries for the explicitly listed books."""
     background_tasks.add_task(summarize.summarize_many, body.book_ids, body.pages)
     return SummarizeBatchOut(book_ids=body.book_ids)
+
+
+@router.post(
+    "/api/admin/tags/auto",
+    response_model=AutoTagBatchOut,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def auto_tag_batch(
+    body: AutoTagBatchRequest,
+    auto_tag: AutoTagDep,
+    background_tasks: BackgroundTasks,
+) -> AutoTagBatchOut:
+    """Schedule LLM classification using only existing tags."""
+    background_tasks.add_task(auto_tag.tag_many, body.book_ids)
+    return AutoTagBatchOut(book_ids=body.book_ids)

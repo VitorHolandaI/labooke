@@ -19,8 +19,7 @@ class ReembedService:
 
     Chunk vectors (content search) are rebuilt from the source pages;
     summary vectors (``vec_summaries``, used by the ask RAG) are
-    re-embedded from the stored ``rag_text`` (or ``description``) with
-    no LLM call.
+    re-embedded from the stored title and description with no LLM call.
 
     Example:
         >>> type(ReembedService(None, None)).__name__
@@ -88,10 +87,9 @@ class ReembedService:
             return
         try:
             book = self._books.get(book_id)
-            text = book.rag_text or book.description
-            if not text:
+            if not book.description:
                 return
-            matrix = self._encode_texts([text])
+            matrix = self._encode_texts([f"{book.title}\n{book.description}"])
             vector = [float(value) for value in matrix[0]]
             self._summaries.upsert(book_id=book_id, vector=vector)
         except Exception:

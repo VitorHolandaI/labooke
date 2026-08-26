@@ -24,9 +24,9 @@ class Settings(BaseSettings):
 
     data_dir: Path = Field(default=Path("./data"))
     import_dir: Path = Field(default=Path("./data/inbox"))
-    embed_model: str = Field(default="intfloat/multilingual-e5-small")
-    embed_cache_model: bool = Field(default=True)
-    embed_worker_idle_seconds: float = Field(default=60.0, ge=1.0)
+    embed_base_url: str = Field(default="")
+    embed_model: str = Field(default="bge-m3")
+    embed_timeout_seconds: float = Field(default=120.0, gt=0)
     chunk_pages: int = Field(default=1, ge=1)
 
     api_host: str = Field(default="127.0.0.1")
@@ -68,3 +68,8 @@ class Settings(BaseSettings):
     def llm_enabled(self) -> bool:
         """Return True when the LLM endpoint and model are configured."""
         return bool(self.llm_base_url) and bool(self.llm_model)
+
+    @property
+    def embed_enabled(self) -> bool:
+        """Return True when the Ollama embedding endpoint is configured."""
+        return bool(self.embed_base_url) and bool(self.embed_model)

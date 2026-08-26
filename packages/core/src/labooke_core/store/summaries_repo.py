@@ -1,6 +1,6 @@
 """Persistence for book-summary embeddings via sqlite-vec.
 
-One vector per book holds the embedding of its generated summary
+One vector per book holds the embedding of its title and generated description
 (see ``SummarizeService``). ``AskService`` runs KNN over this table to
 shortlist candidate books before handing those summaries to the LLM.
 """
@@ -17,13 +17,13 @@ if TYPE_CHECKING:
 
 
 class SummariesRepo:
-    """Store and search one 384-dim summary embedding per book.
+    """Store and search one 1024-dim catalog embedding per book.
 
     Example:
         >>> from labooke_core.store.db import open_db
         >>> repo = SummariesRepo(open_db(":memory:"))
-        >>> repo.upsert(book_id=1, vector=[0.1] * 384)
-        >>> repo.knn(query=[0.1] * 384, k=1)
+        >>> repo.upsert(book_id=1, vector=[0.1] * 1024)
+        >>> repo.knn(query=[0.1] * 1024, k=1)
         [(1, 0.0)]
     """
 
@@ -50,7 +50,7 @@ class SummariesRepo:
         self._conn.commit()
 
     def knn(self, *, query: Sequence[float], k: int = 10) -> list[tuple[int, float]]:
-        """Return the top-``k`` books nearest to ``query`` by summary.
+        """Return the top-``k`` books nearest to ``query`` by catalog text.
 
         Returns ``(book_id, distance)`` ordered by ascending distance.
         """

@@ -6,11 +6,14 @@ export type BookCreateResponse = Schemas["BookCreateResponse"];
 
 export interface ConfigOut {
   embed_model: string;
+  embed_enabled: boolean;
   chunk_pages: number;
   data_dir: string;
   llm_summary_pages: number;
   llm_model: string;
   llm_enabled: boolean;
+  ollama_base_url: string;
+  ollama_overridden: boolean;
 }
 
 export interface SummarizeBatchOut {
@@ -25,8 +28,11 @@ export function getConfig() {
   return api.get<ConfigOut>("/api/config");
 }
 
-export function updateConfig(patch: { llm_summary_pages?: number | null }) {
-  return api.put<{ llm_summary_pages: number }>("/api/admin/config", { body: { ...patch } });
+export function updateConfig(patch: {
+  llm_summary_pages?: number | null;
+  ollama_base_url?: string | null;
+}) {
+  return api.put<ConfigOut>("/api/admin/config", { body: { ...patch } });
 }
 
 export function triggerScan() {
@@ -50,5 +56,11 @@ export function summarizeRandom(count: number, pages?: number) {
 export function summarizeBatch(bookIds: number[], pages?: number) {
   return api.post<SummarizeBatchOut>("/api/admin/summaries/batch", {
     body: { book_ids: bookIds, pages },
+  });
+}
+
+export function autoTagBatch(bookIds: number[]) {
+  return api.post<SummarizeBatchOut>("/api/admin/tags/auto", {
+    body: { book_ids: bookIds },
   });
 }

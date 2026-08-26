@@ -29,9 +29,7 @@ class SettingsRepo:
 
     def get(self, key: str, default: str | None = None) -> str | None:
         """Return the value for ``key`` or ``default`` when unset."""
-        row = self._conn.execute(
-            "SELECT value FROM settings WHERE key = ?", (key,)
-        ).fetchone()
+        row = self._conn.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
         return str(row[0]) if row is not None else default
 
     def set(self, key: str, value: str) -> None:
@@ -41,4 +39,9 @@ class SettingsRepo:
             "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
             (key, value),
         )
+        self._conn.commit()
+
+    def delete(self, key: str) -> None:
+        """Remove a runtime override so its environment default applies."""
+        self._conn.execute("DELETE FROM settings WHERE key = ?", (key,))
         self._conn.commit()

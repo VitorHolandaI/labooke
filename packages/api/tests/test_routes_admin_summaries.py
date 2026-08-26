@@ -47,29 +47,60 @@ def test_summarize_random_rejects_count_below_one(client: TestClient) -> None:
     assert client.post("/api/admin/summaries/random", json={"count": 0}).status_code == 422
 
 
-def test_summarize_batch_accepts_explicit_ids(
-    client: TestClient, container: AppContainer
-) -> None:
+def test_summarize_batch_accepts_explicit_ids(client: TestClient, container: AppContainer) -> None:
     book_id = _insert_book(container, sha256="d", title="Delta")
     response = client.post("/api/admin/summaries/batch", json={"book_ids": [book_id]})
     assert response.status_code == 202
     assert response.json()["book_ids"] == [book_id]
 
 
-def test_put_config_persists_summary_pages(
-    client: TestClient, container: AppContainer
-) -> None:
+def test_auto_tag_batch_accepts_explicit_ids(client: TestClient, container: AppContainer) -> None:
+    book_id = _insert_book(container, sha256="tag", title="Tag me")
+    calls: list[list[int]] = []
+
+    class _FakeAutoTag:
+        def tag_many(self, book_ids):
+            calls.append(list(book_ids))
+
+    container.auto_tag = _FakeAutoTag()  # type: ignore[assignment]
+    response = client.post("/api/admin/tags/auto", json={"book_ids": [book_id]})
+
+    assert response.status_code == 202
+    assert response.json() == {"book_ids": [book_id]}
+    assert calls == [[book_id]]
+
+
+def test_put_config_persists_summary_pages(client: TestClient, container: AppContainer) -> None:
     response = client.put("/api/admin/config", json={"llm_summary_pages": 20})
     assert response.status_code == 200
-    assert response.json() == {"llm_summary_pages": 20}
+    assert response.json()["llm_summary_pages"] == 20
     assert client.get("/api/config").json()["llm_summary_pages"] == 20
 
 
-def test_put_config_null_resets_to_env_default(
-    client: TestClient, container: AppContainer
-) -> None:
+def test_put_config_null_resets_to_env_default(client: TestClient, container: AppContainer) -> None:
     client.put("/api/admin/config", json={"llm_summary_pages": 20})
     response = client.put("/api/admin/config", json={"llm_summary_pages": None})
     assert response.status_code == 200
     default = container.settings.llm_summary_pages
     assert response.json()["llm_summary_pages"] == default
+
+
+def test_put_config_switches_and_resets_ollama_endpoint(client: TestClient) -> None:
+    switched = client.put(
+        "/api/admin/config", json={"ollama_base_url": "http://gpu-host:11434/"}
+    )
+    assert switched.status_code == 200
+    assert switched.json()["ollama_base_url"] == "http://gpu-host:11434"
+    assert switched.json()["ollama_overridden"] is True
+
+    reset = client.put("/api/admin/config", json={"ollama_base_url": None})
+    assert reset.status_code == 200
+    assert reset.json()["ollama_overridden"] is False
+
+
+def test_put_ollama_endpoint_preserves_summary_pages(client: TestClient) -> None:
+    client.put("/api/admin/config", json={"llm_summary_pages": 20})
+    response = client.put(
+        "/api/admin/config", json={"ollama_base_url": "http://gpu-host:11434"}
+    )
+    assert response.json()["llm_summary_pages"] == 20

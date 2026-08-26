@@ -48,7 +48,6 @@ class Book(BaseModel):
     title: str
     author: str | None = None
     description: str | None = None
-    rag_text: str | None = None
     format: str
     page_count: int = 0
     status: BookStatus = BookStatus.PENDING

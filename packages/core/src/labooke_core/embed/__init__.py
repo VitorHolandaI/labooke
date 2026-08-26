@@ -2,21 +2,21 @@
 
 from labooke_core.embed.chunker import TextChunk, chunk_pages
 from labooke_core.embed.encoder import (
-    SentenceTransformerEmbedder,
+    EmbeddingUnavailable,
+    OllamaEmbedder,
     encode,
+    encode_catalog_queries,
     encode_passages,
     encode_query,
-    get_default_embedder,
-    unload_default_embedder,
 )
 
 __all__ = [
-    "SentenceTransformerEmbedder",
+    "EmbeddingUnavailable",
+    "OllamaEmbedder",
     "TextChunk",
     "chunk_pages",
     "encode",
+    "encode_catalog_queries",
     "encode_passages",
     "encode_query",
-    "get_default_embedder",
-    "unload_default_embedder",
 ]

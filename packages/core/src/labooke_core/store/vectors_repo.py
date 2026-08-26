@@ -1,7 +1,7 @@
 """Persistence for chunk embeddings via sqlite-vec.
 
 The ``vec_chunks`` virtual table holds one row per chunk
-(``chunk_id``, ``embedding FLOAT[384]``). This module hides the
+(``chunk_id``, ``embedding FLOAT[1024]``). This module hides the
 serialization detail and exposes ``insert``, ``insert_many``,
 ``knn``, and deletion helpers.
 
@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from labooke_core.store.db import LockedConnection
 
-VEC_DIM = 384  # intfloat/multilingual-e5-small (and most small sentence-transformers)
+VEC_DIM = 1024  # BGE-M3 native dense embedding dimension
 
 
 def _serialize(vector: Sequence[float]) -> bytes:
@@ -29,21 +29,19 @@ def _serialize(vector: Sequence[float]) -> bytes:
         ValueError: if the vector length does not match :data:`VEC_DIM`.
     """
     if len(vector) != VEC_DIM:
-        raise ValueError(
-            f"embedding has {len(vector)} dims, expected {VEC_DIM}"
-        )
+        raise ValueError(f"embedding has {len(vector)} dims, expected {VEC_DIM}")
     return struct.pack(f"{VEC_DIM}f", *vector)
 
 
 class VectorsRepo:
-    """Store and search 384-dim chunk embeddings.
+    """Store and search 1024-dim chunk embeddings.
 
     Example:
         >>> from labooke_core.store.db import open_db
         >>> conn = open_db(":memory:")
         >>> repo = VectorsRepo(conn)
-        >>> repo.insert(chunk_id=1, vector=[0.1] * 384)
-        >>> hits = repo.knn(query=[0.1] * 384, k=1)
+        >>> repo.insert(chunk_id=1, vector=[0.1] * 1024)
+        >>> hits = repo.knn(query=[0.1] * 1024, k=1)
         >>> [chunk_id for chunk_id, _ in hits]
         [1]
     """
@@ -76,9 +74,7 @@ class VectorsRepo:
         if not ids:
             return
         placeholders = ",".join("?" * len(ids))
-        self._conn.execute(
-            f"DELETE FROM vec_chunks WHERE chunk_id IN ({placeholders})", ids
-        )
+        self._conn.execute(f"DELETE FROM vec_chunks WHERE chunk_id IN ({placeholders})", ids)
         self._conn.commit()
 
     def knn(
@@ -91,7 +87,7 @@ class VectorsRepo:
         """Return the top-``k`` nearest chunks to ``query``.
 
         Args:
-            query: 384-dim embedding to search for.
+            query: 1024-dim embedding to search for.
             k: Number of hits to return. Must be >= 1.
             book_ids: Optional whitelist of books to restrict the
                 search to (joins through the ``chunks`` table).

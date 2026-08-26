@@ -34,9 +34,7 @@ class ApiClient:
 
     def _get(self, path: str, params: dict | None = None) -> Any:
         try:
-            resp = httpx.get(
-                f"{self._base}{path}", params=params or {}, timeout=self._timeout
-            )
+            resp = httpx.get(f"{self._base}{path}", params=params or {}, timeout=self._timeout)
         except httpx.TransportError as exc:
             raise ApiError(0, str(exc)) from exc
         _raise(resp)
@@ -44,9 +42,7 @@ class ApiClient:
 
     def _post(self, path: str, json: object = None) -> Any:
         try:
-            resp = httpx.post(
-                f"{self._base}{path}", json=json, timeout=self._timeout
-            )
+            resp = httpx.post(f"{self._base}{path}", json=json, timeout=self._timeout)
         except httpx.TransportError as exc:
             raise ApiError(0, str(exc)) from exc
         _raise(resp)
@@ -102,10 +98,6 @@ class ApiClient:
             params["tags"] = tag_ids
         result = self._get("/api/search", params)
         return result.get("items", [])
-
-    def ask(self, question: str) -> dict:
-        """Ask the library in natural language (LLM); returns {answer, books}."""
-        return self._post("/api/ask", json={"question": question})
 
     # ── reader ────────────────────────────────────────────────────────────────
 

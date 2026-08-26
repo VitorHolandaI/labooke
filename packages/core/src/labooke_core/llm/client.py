@@ -16,7 +16,7 @@ from __future__ import annotations
 import json
 import urllib.error
 import urllib.request
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -41,8 +41,18 @@ class ChatClient(Protocol):
         ...
 
 
+ChatClientSource = ChatClient | Callable[[], ChatClient | None] | None
+
+
 class LlmUnavailable(RuntimeError):
     """Raised when the LLM is not configured or the request fails."""
+
+
+def resolve_chat_client(source: ChatClientSource) -> ChatClient | None:
+    """Resolve a static client or runtime provider to its current client."""
+    if callable(source):
+        return source()
+    return source
 
 
 def _parse_choices(body: bytes) -> str:
@@ -83,6 +93,11 @@ class OpenAICompatibleClient:
     def model_name(self) -> str:
         """Return the configured model identifier."""
         return self._model
+
+    @property
+    def base_url(self) -> str:
+        """Return the active OpenAI-compatible API root."""
+        return self._base_url
 
     def chat(self, messages: Sequence[ChatMessage]) -> str:
         """Send a chat request and return the assistant reply.

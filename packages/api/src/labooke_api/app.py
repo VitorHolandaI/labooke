@@ -9,6 +9,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from labooke_core import __version__ as core_version
 from labooke_core.config import Settings
+from labooke_core.services import OLLAMA_BASE_URL_KEY
 
 from labooke_api.container import AppContainer, build_container
 from labooke_api.errors import register_error_handlers
@@ -32,6 +33,7 @@ def _register_cors(app: FastAPI, settings: Settings) -> None:
 
 def _lifespan_factory(settings: Settings, container: AppContainer | None):
     """Build the lifespan callable that owns the shared container."""
+
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         """Open shared resources before serving and release them after."""
@@ -84,36 +86,39 @@ def create_app(
         """Return runtime configuration so the frontend can display it."""
         container = getattr(request.app.state, "container", None)
         stored_pages = None
+        ollama_base_url = ""
+        ollama_overridden = False
         if container is not None:
             stored_pages = container.settings_repo.get("llm_summary_pages")
+            ollama_base_url = container.ollama.active_base_url()
+            ollama_overridden = container.ollama.override_base_url() is not None
         return {
             "embed_model": resolved_settings.embed_model,
+            "embed_enabled": bool(ollama_base_url) and bool(resolved_settings.embed_model),
             "chunk_pages": resolved_settings.chunk_pages,
             "data_dir": str(resolved_settings.data_dir),
-            "llm_summary_pages": int(
-                stored_pages or resolved_settings.llm_summary_pages
-            ),
+            "llm_summary_pages": int(stored_pages or resolved_settings.llm_summary_pages),
             "llm_model": resolved_settings.llm_model,
-            "llm_enabled": resolved_settings.llm_enabled,
+            "llm_enabled": bool(ollama_base_url) and bool(resolved_settings.llm_model),
+            "ollama_base_url": ollama_base_url,
+            "ollama_overridden": ollama_overridden,
         }
 
     @app.put("/api/admin/config")
-    def update_config(
-        body: AdminConfigUpdate, request: Request
-    ) -> dict[str, int]:
+    def update_config(body: AdminConfigUpdate, request: Request) -> dict[str, str | int | bool]:
         """Persist runtime config overrides from the Admin page."""
         container = request.app.state.container
-        if body.llm_summary_pages is not None:
-            container.settings_repo.set(
-                "llm_summary_pages", str(body.llm_summary_pages)
-            )
-        else:
-            container.settings_repo.set("llm_summary_pages", "")
-        stored = container.settings_repo.get("llm_summary_pages")
-        return {
-            "llm_summary_pages": int(
-                stored or resolved_settings.llm_summary_pages
-            ),
-        }
+        fields = body.model_fields_set
+        if "llm_summary_pages" in fields:
+            if body.llm_summary_pages is None:
+                container.settings_repo.delete("llm_summary_pages")
+            else:
+                container.settings_repo.set("llm_summary_pages", str(body.llm_summary_pages))
+        if "ollama_base_url" in fields:
+            if body.ollama_base_url is None:
+                container.settings_repo.delete(OLLAMA_BASE_URL_KEY)
+            else:
+                container.settings_repo.set(OLLAMA_BASE_URL_KEY, body.ollama_base_url)
+        return config(request)
 
     return app

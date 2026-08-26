@@ -34,6 +34,7 @@ def _make_settings(tmp_path: Path) -> Settings:
         import_dir=tmp_path / "inbox",
         # hermético: ignora um .env local que ligue LLM ou CORS
         cors_origins=[],
+        embed_base_url="",
         llm_base_url="",
         llm_model="",
     )

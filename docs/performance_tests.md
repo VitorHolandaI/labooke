@@ -15,7 +15,7 @@ GET /api/search?q=<query>&mode=semantic&algo=<algo>&k=10
 ```
 
 O parâmetro `algo` seleciona a implementação de KNN por trás do `VectorsRepo`.
-Todas recebem o mesmo vetor de query (E5 `query:`-prefixed, 384 dims) e devem
+Todas recebem o mesmo vetor de query BGE-M3 (1024 dims) e devem
 retornar `(chunk_id, distance)` ordenado — só muda a estratégia interna.
 
 ```python
@@ -24,7 +24,7 @@ class KnnBackend(Protocol):
     def knn(self, query: list[float], k: int, book_ids: list[int]) -> list[tuple[int, float]]: ...
 
 BACKENDS = {
-    "brute":  BruteForceKnn(),   # atual — sqlite-vec, scan O(C × 384)
+    "brute":  BruteForceKnn(),   # atual — sqlite-vec, scan O(C × 1024)
     "hnsw":   HnswKnn(),         # placeholder — hnswlib, grafo em camadas
     "ivf":    IvfKnn(),          # placeholder — FAISS IVF, clusters Voronoi
     "pq":     IvfPqKnn(),        # placeholder — IVF + product quantization

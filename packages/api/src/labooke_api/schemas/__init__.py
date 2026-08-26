@@ -2,6 +2,8 @@
 
 from labooke_api.schemas.admin import (
     AdminConfigUpdate,
+    AutoTagBatchOut,
+    AutoTagBatchRequest,
     InvalidateSummariesOut,
     ScanResultOut,
     SummarizeBatchOut,
@@ -33,6 +35,8 @@ __all__ = [
     "AdminConfigUpdate",
     "AskRequest",
     "AskResponse",
+    "AutoTagBatchOut",
+    "AutoTagBatchRequest",
     "BookCreateResponse",
     "BookListOut",
     "BookOut",

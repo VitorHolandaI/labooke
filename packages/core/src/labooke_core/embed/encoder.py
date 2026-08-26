@@ -1,194 +1,156 @@
-"""Lazy sentence-transformers wrapper for labooke embeddings."""
+"""Ollama embedding client and task-specific query formatting."""
 
 from __future__ import annotations
 
-import gc
-import time
+import json
+import urllib.error
+import urllib.request
 from collections.abc import Sequence
-from concurrent.futures import ProcessPoolExecutor
-from threading import Lock, Timer
-from typing import Any
+from typing import Protocol
 
 import numpy as np
 
 from labooke_core.config import Settings
 from labooke_core.store.vectors_repo import VEC_DIM
 
-_EMBEDDERS: dict[str, SentenceTransformerEmbedder] = {}
-_EMBED_WORKER: ProcessPoolExecutor | None = None
-_EMBED_WORKER_DEADLINE = 0.0
-_EMBED_WORKER_TIMER: Timer | None = None
-_EMBED_WORKER_LOCK = Lock()
+
+class EmbeddingUnavailable(RuntimeError):
+    """Raised when the configured Ollama embedding endpoint cannot respond."""
 
 
-def _resolved_model_name(model_name: str | None) -> str:
-    if model_name is not None:
-        return model_name
-    return Settings().embed_model
+class EmbeddingTransport(Protocol):
+    """HTTP boundary used by :class:`OllamaEmbedder`."""
+
+    def post_json(
+        self,
+        url: str,
+        payload: dict[str, object],
+        timeout_seconds: float,
+    ) -> object:
+        """POST JSON and return the decoded response body."""
+        ...
 
 
-def _build_model(model_name: str) -> Any:
-    from sentence_transformers import SentenceTransformer
+class UrllibEmbeddingTransport:
+    """Send embedding requests with the Python standard library."""
 
-    return SentenceTransformer(model_name, device="cpu")
+    def post_json(
+        self,
+        url: str,
+        payload: dict[str, object],
+        timeout_seconds: float,
+    ) -> object:
+        """POST one JSON payload and decode the response."""
+        request = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode(),
+            headers={"content-type": "application/json"},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
+                return json.loads(response.read())
+        except urllib.error.HTTPError as exc:
+            body = exc.read()[:500]
+            raise EmbeddingUnavailable(
+                f"Ollama embedding request to {url!r} returned HTTP {exc.code}: {body!r}"
+            ) from exc
+        except (OSError, json.JSONDecodeError) as exc:
+            raise EmbeddingUnavailable(
+                f"Ollama embedding request to {url!r} failed: {exc}"
+            ) from exc
+
+
+class OllamaEmbedder:
+    """Generate normalized vectors through Ollama's native embed API.
+
+    Example:
+        >>> OllamaEmbedder.__name__
+        'OllamaEmbedder'
+    """
+
+    def __init__(
+        self,
+        base_url: str,
+        model_name: str,
+        *,
+        timeout_seconds: float = 120.0,
+        transport: EmbeddingTransport | None = None,
+    ) -> None:
+        self._url = f"{base_url.rstrip('/')}/api/embed"
+        self.model_name = model_name
+        self._timeout_seconds = timeout_seconds
+        self._transport = transport or UrllibEmbeddingTransport()
+
+    def encode(self, texts: Sequence[str]) -> np.ndarray:
+        """Encode texts as a normalized 1024-dimensional float32 matrix."""
+        if not texts:
+            return _empty_matrix()
+        body = self._transport.post_json(
+            self._url,
+            {
+                "model": self.model_name,
+                "input": list(texts),
+                "truncate": True,
+            },
+            self._timeout_seconds,
+        )
+        if not isinstance(body, dict):
+            raise EmbeddingUnavailable(
+                f"Ollama returned body type={type(body).__name__}; expected JSON object"
+            )
+        return _normalized_matrix(body.get("embeddings"), expected_rows=len(texts))
 
 
 def _empty_matrix() -> np.ndarray:
     return np.empty((0, VEC_DIM), dtype=np.float32)
 
 
-def _normalized_matrix(raw_embeddings: Any) -> np.ndarray:
+def _normalized_matrix(raw_embeddings: object, *, expected_rows: int) -> np.ndarray:
     matrix = np.asarray(raw_embeddings, dtype=np.float32)
-    return np.atleast_2d(matrix)
-
-
-def _encode_in_child_process(model_name: str, texts: list[str]) -> np.ndarray:
-    return get_default_embedder(model_name).encode(texts)
-
-
-def _get_embed_worker() -> ProcessPoolExecutor:
-    global _EMBED_WORKER, _EMBED_WORKER_DEADLINE, _EMBED_WORKER_TIMER
-    with _EMBED_WORKER_LOCK:
-        _EMBED_WORKER_DEADLINE = 0.0
-        if _EMBED_WORKER_TIMER is not None:
-            _EMBED_WORKER_TIMER.cancel()
-            _EMBED_WORKER_TIMER = None
-        if _EMBED_WORKER is None:
-            _EMBED_WORKER = ProcessPoolExecutor(max_workers=1)
-        return _EMBED_WORKER
-
-
-def _shutdown_embed_worker() -> None:
-    global _EMBED_WORKER, _EMBED_WORKER_DEADLINE, _EMBED_WORKER_TIMER
-    with _EMBED_WORKER_LOCK:
-        worker, _EMBED_WORKER = _EMBED_WORKER, None
-        _EMBED_WORKER_DEADLINE = 0.0
-        timer, _EMBED_WORKER_TIMER = _EMBED_WORKER_TIMER, None
-    if timer is not None:
-        timer.cancel()
-    if worker is not None:
-        worker.shutdown(wait=False, cancel_futures=True)
-
-
-def _shutdown_embed_worker_if_idle(deadline: float) -> None:
-    global _EMBED_WORKER, _EMBED_WORKER_DEADLINE, _EMBED_WORKER_TIMER
-    with _EMBED_WORKER_LOCK:
-        if deadline != _EMBED_WORKER_DEADLINE or time.monotonic() < deadline:
-            return
-        worker, _EMBED_WORKER = _EMBED_WORKER, None
-        _EMBED_WORKER_DEADLINE = 0.0
-        _EMBED_WORKER_TIMER = None
-    if worker is not None:
-        worker.shutdown(wait=False, cancel_futures=True)
-
-
-def _schedule_embed_worker_shutdown(idle_seconds: float) -> None:
-    global _EMBED_WORKER_DEADLINE, _EMBED_WORKER_TIMER
-    with _EMBED_WORKER_LOCK:
-        if _EMBED_WORKER_TIMER is not None:
-            _EMBED_WORKER_TIMER.cancel()
-        _EMBED_WORKER_DEADLINE = time.monotonic() + idle_seconds
-        _EMBED_WORKER_TIMER = Timer(
-            idle_seconds,
-            _shutdown_embed_worker_if_idle,
-            args=(_EMBED_WORKER_DEADLINE,),
+    expected_shape = (expected_rows, VEC_DIM)
+    if matrix.shape != expected_shape:
+        raise EmbeddingUnavailable(
+            f"Ollama returned embedding shape={matrix.shape!r}; expected {expected_shape!r}"
         )
-        _EMBED_WORKER_TIMER.daemon = True
-        _EMBED_WORKER_TIMER.start()
+    norms = np.linalg.norm(matrix, axis=1, keepdims=True)
+    if np.any(norms == 0):
+        raise EmbeddingUnavailable(
+            "Ollama returned a zero-length embedding; expected non-zero vectors"
+        )
+    return matrix / norms
 
 
-def _encode_without_model_cache(model_name: str, texts: Sequence[str]) -> np.ndarray:
+def _settings_embedder(settings: Settings | None = None) -> OllamaEmbedder:
+    resolved = settings or Settings()
+    if not resolved.embed_base_url or not resolved.embed_model:
+        raise EmbeddingUnavailable(
+            "embedding not configured; expected LABOOKE_EMBED_BASE_URL and LABOOKE_EMBED_MODEL"
+        )
+    return OllamaEmbedder(
+        resolved.embed_base_url,
+        resolved.embed_model,
+        timeout_seconds=resolved.embed_timeout_seconds,
+    )
+
+
+def encode(texts: Sequence[str]) -> np.ndarray:
+    """Encode document texts with the configured Ollama model."""
     if not texts:
         return _empty_matrix()
-    settings = Settings()
-    worker = _get_embed_worker()
-    matrix = worker.submit(_encode_in_child_process, model_name, list(texts)).result()
-    _schedule_embed_worker_shutdown(settings.embed_worker_idle_seconds)
-    return _normalized_matrix(matrix)
+    return _settings_embedder().encode(texts)
 
 
-class SentenceTransformerEmbedder:
-    """Thin project-owned wrapper around `sentence-transformers`.
-
-    Example:
-        >>> embedder = SentenceTransformerEmbedder("BAAI/bge-small-en-v1.5")
-        >>> embedder.model_name
-        'BAAI/bge-small-en-v1.5'
-    """
-
-    def __init__(self, model_name: str) -> None:
-        self.model_name = model_name
-        self._model: Any | None = None
-
-    def _loaded_model(self) -> Any:
-        if self._model is None:
-            self._model = _build_model(self.model_name)
-        return self._model
-
-    def encode(self, texts: Sequence[str]) -> np.ndarray:
-        """Encode ``texts`` into a float32 matrix of normalized embeddings.
-
-        Example:
-            >>> SentenceTransformerEmbedder('BAAI/bge-small-en-v1.5').encode([]).shape
-            (0, 384)
-        """
-        if not texts:
-            return _empty_matrix()
-        raw = self._loaded_model().encode(
-            list(texts),
-            convert_to_numpy=True,
-            normalize_embeddings=True,
-        )
-        return _normalized_matrix(raw)
-
-    def unload(self) -> None:
-        """Drop the loaded model reference so it can be garbage-collected."""
-        self._model = None
-        gc.collect()
+def encode_query(texts: Sequence[str]) -> np.ndarray:
+    """Encode passage-search queries with BGE-M3."""
+    return encode(texts)
 
 
-def get_default_embedder(model_name: str | None = None) -> SentenceTransformerEmbedder:
-    """Return the cached embedder for ``model_name`` or the configured default.
-
-    Example:
-        >>> get_default_embedder('demo') is get_default_embedder('demo')
-        True
-    """
-    resolved = _resolved_model_name(model_name)
-    if resolved not in _EMBEDDERS:
-        _EMBEDDERS[resolved] = SentenceTransformerEmbedder(resolved)
-    return _EMBEDDERS[resolved]
+def encode_catalog_queries(texts: Sequence[str]) -> np.ndarray:
+    """Encode catalog queries with BGE-M3."""
+    return encode(texts)
 
 
-def encode(texts: Sequence[str], *, model_name: str | None = None) -> np.ndarray:
-    """Encode ``texts`` through the cached default embedder."""
-    resolved = _resolved_model_name(model_name)
-    if not Settings().embed_cache_model:
-        return _encode_without_model_cache(resolved, texts)
-    return get_default_embedder(resolved).encode(texts)
-
-
-def unload_default_embedder(model_name: str | None = None) -> None:
-    """Unload and forget the cached embedder for ``model_name`` if present."""
-    resolved = _resolved_model_name(model_name)
-    embedder = _EMBEDDERS.pop(resolved, None)
-    if embedder is not None:
-        embedder.unload()
-
-
-def _is_e5_model(model_name: str) -> bool:
-    return "e5" in model_name.lower()
-
-
-def encode_query(texts: Sequence[str], *, model_name: str | None = None) -> np.ndarray:
-    """Encode search queries, adding 'query: ' prefix for E5 models."""
-    resolved = _resolved_model_name(model_name)
-    prefixed = [f"query: {t}" for t in texts] if _is_e5_model(resolved) else list(texts)
-    return encode(prefixed, model_name=resolved)
-
-
-def encode_passages(texts: Sequence[str], *, model_name: str | None = None) -> np.ndarray:
-    """Encode document passages, adding 'passage: ' prefix for E5 models."""
-    resolved = _resolved_model_name(model_name)
-    prefixed = [f"passage: {t}" for t in texts] if _is_e5_model(resolved) else list(texts)
-    return encode(prefixed, model_name=resolved)
+def encode_passages(texts: Sequence[str]) -> np.ndarray:
+    """Encode passage or catalog documents without query instructions."""
+    return encode(texts)

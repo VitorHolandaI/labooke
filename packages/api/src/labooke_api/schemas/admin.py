@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from urllib.parse import urlsplit
+
 from labooke_core.services import ScanResult
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class ScanResultOut(BaseModel):
@@ -43,6 +45,18 @@ class SummarizeBatchOut(BaseModel):
     book_ids: list[int]
 
 
+class AutoTagBatchRequest(BaseModel):
+    """Books to classify against the existing tag vocabulary."""
+
+    book_ids: list[int] = Field(min_length=1, max_length=500)
+
+
+class AutoTagBatchOut(BaseModel):
+    """``202 Accepted`` payload listing books scheduled for auto-tagging."""
+
+    book_ids: list[int]
+
+
 class InvalidateSummariesOut(BaseModel):
     """Payload returned after invalidating all book summaries."""
 
@@ -57,3 +71,22 @@ class AdminConfigUpdate(BaseModel):
     """
 
     llm_summary_pages: int | None = Field(default=None, ge=1, le=5000)
+    ollama_base_url: str | None = Field(default=None, max_length=500)
+
+    @field_validator("ollama_base_url")
+    @classmethod
+    def validate_ollama_base_url(cls, raw: str | None) -> str | None:
+        """Normalize a native Ollama root URL or preserve ``None`` for reset."""
+        if raw is None:
+            return None
+        value = raw.strip().rstrip("/")
+        parsed = urlsplit(value)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            raise ValueError(
+                f"ollama_base_url={raw!r} is invalid; expected an http(s) Ollama root URL"
+            )
+        if parsed.path or parsed.query or parsed.fragment:
+            raise ValueError(
+                f"ollama_base_url={raw!r} includes a path/query; expected the Ollama root URL"
+            )
+        return value

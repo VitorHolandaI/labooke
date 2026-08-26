@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { getConfig, reembedAll, triggerScan } from "../../../api/admin";
+import { getConfig, reembedAll, triggerScan, updateConfig } from "../../../api/admin";
 
 export function useConfig() {
   return useQuery({
@@ -12,6 +12,14 @@ export function useConfig() {
 
 export function useScan() {
   return useMutation({ mutationFn: triggerScan });
+}
+
+export function useUpdateConfig() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: updateConfig,
+    onSuccess: () => client.invalidateQueries({ queryKey: ["config"] }),
+  });
 }
 
 export function useReembedAll() {

@@ -13,7 +13,7 @@ def test_settings_defaults(monkeypatch):
     monkeypatch.delenv("LABOOKE_EMBED_MODEL", raising=False)
     settings = Settings()
     assert settings.chunk_pages == 1
-    assert settings.embed_model == "intfloat/multilingual-e5-small"
+    assert settings.embed_model == "bge-m3"
     assert settings.import_dir == settings.data_dir / "inbox"
 
 

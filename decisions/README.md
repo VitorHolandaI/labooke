@@ -27,3 +27,5 @@ Format per file:
 | [0013](0013-cli-deferred-after-web.md) | Bible CLI ships only after web is complete | accepted |
 | [0014](0014-folder-scan-ingest.md) | Folder-scan ingest as a second upload path | accepted |
 | [0015](0015-llm-summarize-ask.md) | LLM summarize + ask via thin OpenAI-compatible client | accepted |
+| [0016](0016-llm-auto-tag-existing-vocabulary.md) | LLM auto-tagging uses descriptions and existing tags | accepted |
+| [0017](0017-bge-m3-via-ollama.md) | BGE-M3 embeddings via a runtime-switchable Ollama endpoint | accepted |

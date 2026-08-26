@@ -56,10 +56,16 @@ def test_ask_happy_path(client: TestClient, container: AppContainer) -> None:
 
     class _FakeAsk:
         def ask(self, question: str):
-            return AskAnswer(answer="Recomendo Astrofísica.", books=[book])
+            return AskAnswer(
+                answer="Recomendo Astrofísica.",
+                books=[book],
+                reasons={book.id: "Explica ciência estelar para iniciantes."},
+            )
 
     container.ask = _FakeAsk()  # type: ignore[assignment]
     response = client.post("/api/ask", json={"question": "quero um livro sobre ciência"})
     assert response.status_code == 200
     assert response.json()["answer"] == "Recomendo Astrofísica."
     assert response.json()["books"][0]["id"] == book_id
+    assert response.json()["recommendations"][0]["book"]["id"] == book_id
+    assert "iniciantes" in response.json()["recommendations"][0]["reason"]

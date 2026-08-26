@@ -131,31 +131,6 @@
   gap: var(--space-2);
 }
 
-.ragSection {
-  border-top: 1px solid var(--color-border);
-  padding-top: var(--space-3);
-}
-
-.ragSummary {
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: var(--color-text-muted);
-}
-
-.ragText {
-  margin: var(--space-2) 0 0;
-  font-size: 0.875rem;
-  line-height: 1.5;
-  color: var(--color-text);
-}
-
-.ragEmpty {
-  margin: var(--space-2) 0 0;
-  font-size: 0.875rem;
-  color: var(--color-text-muted);
-}
-
 .loading,
 .error {
   color: var(--color-text-muted);

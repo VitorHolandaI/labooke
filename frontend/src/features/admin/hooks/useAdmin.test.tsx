@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { server } from "../../../test/mswServer";
-import { useConfig, useReembedAll, useScan } from "./useAdmin";
+import { useConfig, useReembedAll, useScan, useUpdateConfig } from "./useAdmin";
 
 function makeWrapper() {
   const qc = new QueryClient({
@@ -39,6 +39,23 @@ describe("useScan", () => {
     result.current.mutate(undefined);
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual(scanResult);
+  });
+});
+
+describe("useUpdateConfig", () => {
+  it("persists the Ollama override and invalidates config", async () => {
+    server.use(
+      http.put("*/api/admin/config", async ({ request }) => {
+        expect(await request.json()).toEqual({ ollama_base_url: "http://gpu:11434" });
+        return HttpResponse.json({ ollama_base_url: "http://gpu:11434" });
+      }),
+    );
+    const { Wrapper, invalidate } = makeWrapper();
+    const { result } = renderHook(() => useUpdateConfig(), { wrapper: Wrapper });
+
+    result.current.mutate({ ollama_base_url: "http://gpu:11434" });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(invalidate).toHaveBeenCalledWith(expect.objectContaining({ queryKey: ["config"] }));
   });
 });
 

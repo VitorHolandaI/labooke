@@ -9,7 +9,6 @@ dependencies = [
     "PyMuPDF>=1.24",
     "EbookLib>=0.18",
     "beautifulsoup4>=4.12",
-    "sentence-transformers>=3.0",
     "sqlite-vec>=0.1.6",
     "structlog>=24.0",
     "Pillow>=10.0",

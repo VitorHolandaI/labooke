@@ -12,7 +12,7 @@ hand-rolled (sem Alembic) em
 
 | Tabela            | Colunas principais                                      | Papel                          |
 |-------------------|----------------------------------------------------------|--------------------------------|
-| `books`           | `id`, `sha256`, `path`, `title`, `author`, `description`, `rag_text`, `format`, `page_count`, `status`, `ingest_error`, `created_at` | metadados do livro             |
+| `books`           | `id`, `sha256`, `path`, `title`, `author`, `description`, `format`, `page_count`, `status`, `ingest_error`, `created_at` | metadados do livro             |
 | `tags`            | `id`, `name`, `slug` (único), `color`                    | tags planas                    |
 | `book_tags`       | `book_id`, `tag_id` (PK composta)                        | junction livro↔tag             |
 | `chunks`          | `id`, `book_id`, `page_start`, `page_end`, `text`        | range de páginas + texto (FTS) |
@@ -25,13 +25,13 @@ hand-rolled (sem Alembic) em
 
 | Tabela         | Tipo  | Conteúdo                                              |
 |----------------|-------|--------------------------------------------------------|
-| `vec_chunks`   | vec0  | `(chunk_id, embedding FLOAT[384])` — embeddings de chunks |
-| `vec_summaries`| vec0  | `(book_id, embedding FLOAT[384])` — embedding do resumo |
+| `vec_chunks`   | vec0  | `(chunk_id, embedding FLOAT[1024])` — embeddings de chunks |
+| `vec_summaries`| vec0  | `(book_id, embedding FLOAT[1024])` — embedding de título + descrição |
 | `books_fts`    | fts5  | índice de título (busca híbrida)                       |
 | `chunks_fts`   | fts5  | índice BM25 do texto dos chunks                        |
 
-Dimensão `384` = `intfloat/multilingual-e5-small`. Trocar de modelo
-com dimensão diferente exige migration nova + re-embed total.
+Dimensão `1024` = saída dense nativa do BGE-M3. Trocar de modelo com
+dimensão diferente exige migration nova + re-embed total manual.
 
 ## Migrations
 
@@ -44,6 +44,8 @@ com dimensão diferente exige migration nova + re-embed total.
 | 0005 | `vec_summaries` (embedding do resumo p/ RAG) |
 | 0006 | tabela `settings` (runtime config do Admin)  |
 | 0007 | `books.rag_text` (texto de busca p/ RAG)     |
+| 0008 | remove `books.rag_text`; catálogo usa a descrição |
+| 0009 | recria `vec_chunks` e `vec_summaries` em 1024 dimensões |
 
 Aplicadas por `migrator.migrate()` na ordem, com a versão registrada em
 `schema_version`. Idempotente: rodar de novo não faz nada.

@@ -9,6 +9,7 @@ from labooke_core.services.summarize_service import SummarizeService, _parse_sum
 from labooke_core.store.books_repo import BooksRepo
 from labooke_core.store.db import open_db
 from labooke_core.store.summaries_repo import SummariesRepo
+from labooke_core.store.vectors_repo import VEC_DIM
 
 
 class _FakeChatClient:
@@ -19,6 +20,15 @@ class _FakeChatClient:
     def chat(self, messages) -> str:
         self.calls.append(list(messages))
         return self._reply
+
+
+class _RecordingEncoder:
+    def __init__(self):
+        self.calls: list[list[str]] = []
+
+    def __call__(self, texts):
+        self.calls.append(list(texts))
+        return np.zeros((len(texts), VEC_DIM), dtype=np.float32)
 
 
 class _FakeExtractor:
@@ -37,7 +47,7 @@ class _FakeExtractor:
 
 
 def _fake_encoder(texts):
-    return np.zeros((len(texts), 384), dtype=np.float32)
+    return np.zeros((len(texts), VEC_DIM), dtype=np.float32)
 
 
 @pytest.fixture
@@ -69,40 +79,33 @@ def _settings():
     return Settings(llm_base_url="http://x/v1", llm_model="m", llm_summary_pages=10)
 
 
-def _service(books, summaries, client, settings=None):
+def _service(books, summaries, client, settings=None, encode_texts=_fake_encoder):
     return SummarizeService(
         settings or _settings(),
         books,
         summaries,
         client,
         extractor_factory=lambda _fmt: _FakeExtractor(),
-        encode_texts=_fake_encoder,
+        encode_texts=encode_texts,
     )
 
 
 def test_parse_summary_extracts_fields():
-    result = _parse_summary(
-        '{"author": "Jane", "summary": "About things.", "rag_summary": "topics: A, B"}'
-    )
+    result = _parse_summary('{"author": "Jane", "summary": "About things."}')
     assert result.author == "Jane"
     assert result.summary == "About things."
-    assert result.rag_text == "topics: A, B"
 
 
 def test_parse_summary_falls_back_to_raw_text():
     result = _parse_summary("just plain text")
     assert result.author is None
     assert result.summary == "just plain text"
-    assert result.rag_text is None
 
 
 def test_parse_summary_strips_markdown_fences():
-    result = _parse_summary(
-        '```json\n{"author": "Jane", "summary": "About X.", "rag_summary": "A, B"}\n```'
-    )
+    result = _parse_summary('```json\n{"author": "Jane", "summary": "About X."}\n```')
     assert result.author == "Jane"
     assert result.summary == "About X."
-    assert result.rag_text == "A, B"
 
 
 def test_parse_summary_ignores_trailing_prose():
@@ -112,23 +115,24 @@ def test_parse_summary_ignores_trailing_prose():
 
 
 def test_summarize_writes_description_author_and_vector(books, summaries):
-    client = _FakeChatClient(
-        '{"author": "Jane Doe", "summary": "A science book.", "rag_summary": "science topics"}'
-    )
-    service = _service(books, summaries, client)
+    client = _FakeChatClient('{"author": "Jane Doe", "summary": "A science book."}')
+    encoder = _RecordingEncoder()
+    service = _service(books, summaries, client, encode_texts=encoder)
     book_id = _make_book(books).id
 
     updated = service.summarize(book_id)
 
     assert updated.description == "A science book."
     assert updated.author == "Jane Doe"
-    assert updated.rag_text == "science topics"
-    assert summaries.knn(query=[0.0] * 384, k=1)[0][0] == book_id
+    assert summaries.knn(query=[0.0] * VEC_DIM, k=1)[0][0] == book_id
+    assert encoder.calls == [["Some Book\nA science book."]]
     assert client.calls[0][0].role == "system"
+    assert "exactly two keys" in client.calls[0][0].content
+    assert "book's language" in client.calls[0][0].content
 
 
 def test_summarize_many_isolates_failures(books, summaries):
-    client = _FakeChatClient('{"author": "Jane", "summary": "S", "rag_summary": "R"}')
+    client = _FakeChatClient('{"author": "Jane", "summary": "S"}')
     service = _service(books, summaries, client)
     good = _make_book(books).id
     results = service.summarize_many([good, 9999])
@@ -138,7 +142,7 @@ def test_summarize_many_isolates_failures(books, summaries):
 
 
 def test_pick_random_candidates_returns_missing_only(books, summaries):
-    client = _FakeChatClient('{"author": "J", "summary": "S", "rag_summary": "R"}')
+    client = _FakeChatClient('{"author": "J", "summary": "S"}')
     service = _service(books, summaries, client)
     missing_a = _make_book(books, sha="a").id
     missing_b = _make_book(books, sha="b").id
@@ -149,16 +153,13 @@ def test_pick_random_candidates_returns_missing_only(books, summaries):
 
 
 def test_invalidate_all_clears_summaries(books, summaries):
-    client = _FakeChatClient(
-        '{"author": "Jane", "summary": "S", "rag_summary": "R"}'
-    )
+    client = _FakeChatClient('{"author": "Jane", "summary": "S"}')
     service = _service(books, summaries, client)
     book_id = _make_book(books).id
     service.summarize(book_id)
     assert service.invalidate_all() == 1
     assert books.get(book_id).description is None
-    assert books.get(book_id).rag_text is None
-    assert summaries.knn(query=[0.0] * 384, k=5) == []
+    assert summaries.knn(query=[0.0] * VEC_DIM, k=5) == []
 
 
 def test_summarize_requires_client(books, summaries):
