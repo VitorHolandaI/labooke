@@ -61,8 +61,8 @@ def test_j_scrolls_down_one_line():
 
 
 def test_j_does_not_scroll_past_last_line():
-    s = handle_key(_state(scroll=4), "j")  # 5 lines, max scroll = 4
-    assert s.scroll == 4
+    s = handle_key(_state(scroll=2), "j", viewport_rows=3)
+    assert s.scroll == 2
 
 
 def test_k_scrolls_up_one_line():
@@ -73,6 +73,38 @@ def test_k_scrolls_up_one_line():
 def test_k_does_not_scroll_above_zero():
     s = handle_key(_state(scroll=0), "k")
     assert s.scroll == 0
+
+
+def test_space_scrolls_down_one_viewport():
+    s = handle_key(_state(), " ", viewport_rows=3)
+    assert s.scroll == 2
+
+
+def test_b_scrolls_up_one_viewport():
+    s = handle_key(_state(scroll=2), "b", viewport_rows=2)
+    assert s.scroll == 0
+
+
+def test_right_arrow_advances_page():
+    s = handle_key(_state(page=3, scroll=2), "right", viewport_rows=3)
+    assert s.page == 4
+    assert s.scroll == 0
+
+
+def test_left_arrow_returns_to_previous_page():
+    s = handle_key(_state(page=3, scroll=2), "left", viewport_rows=2)
+    assert s.page == 2
+    assert s.scroll == 0
+
+
+def test_angle_brackets_change_pages():
+    assert handle_key(_state(page=3), ">").page == 4
+    assert handle_key(_state(page=3), "<").page == 2
+
+
+def test_vertical_arrows_scroll_one_line():
+    assert handle_key(_state(), "down", viewport_rows=3).scroll == 1
+    assert handle_key(_state(scroll=1), "up", viewport_rows=3).scroll == 0
 
 
 # --- quit ---
@@ -105,3 +137,10 @@ def test_set_search_query_stores_query():
     s = set_search_query(_state(), "kernel")
     assert s.search_query == "kernel"
     assert s.searching is False
+
+
+def test_set_search_query_scrolls_to_matching_line():
+    from labooke_bible._pager import set_search_query
+
+    s = set_search_query(_state(), "FOUR", viewport_rows=3)
+    assert s.scroll == 2
