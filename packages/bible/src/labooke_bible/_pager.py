@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 
 @dataclass(frozen=True)
@@ -23,15 +23,16 @@ class PageState:
     scroll: int
     search_query: str | None
     lines: list[str]
+    source_text: str = ""
     quit: bool = False
     searching: bool = False
     goto_page: bool = False
 
 
-def handle_key(state: PageState, key: str) -> PageState:
+def handle_key(state: PageState, key: str, viewport_rows: int = 1) -> PageState:
     """Return a new PageState reflecting one keypress.
 
-    Recognised keys: j k n p g G q / :. Unknown keys are ignored.
+    Left/right change pages; up/down scroll the current page.
 
     Example:
         >>> s = PageState(book_id=1, title="T", page=3, total_pages=5,
@@ -39,26 +40,47 @@ def handle_key(state: PageState, key: str) -> PageState:
         >>> handle_key(s, "n").page
         4
     """
-    if key == "n":
-        return _replace(state, page=min(state.page + 1, state.total_pages), scroll=0)
-    if key == "p":
-        return _replace(state, page=max(state.page - 1, 1), scroll=0)
-    if key == "g":
-        return _replace(state, page=1, scroll=0)
-    if key == "G":
-        return _replace(state, page=state.total_pages, scroll=0)
-    if key == "j":
-        max_scroll = max(0, len(state.lines) - 1)
-        return _replace(state, scroll=min(state.scroll + 1, max_scroll))
-    if key == "k":
-        return _replace(state, scroll=max(state.scroll - 1, 0))
+    if key in {"n", "p", "g", "G", "left", "right", "<", ">"}:
+        return _move_page(state, key)
+    if key in {"j", "k", " ", "f", "b", "up", "down"}:
+        return _move_viewport(state, key, viewport_rows)
     if key == "q":
-        return _replace(state, quit=True)
+        return replace(state, quit=True)
     if key == "/":
-        return _replace(state, searching=True)
+        return replace(state, searching=True)
     if key == ":":
-        return _replace(state, goto_page=True)
+        return replace(state, goto_page=True)
     return state
+
+
+def _move_page(state: PageState, key: str) -> PageState:
+    targets = {
+        "n": min(state.page + 1, state.total_pages),
+        "p": max(state.page - 1, 1),
+        "g": 1,
+        "G": state.total_pages,
+        "left": max(state.page - 1, 1),
+        "<": max(state.page - 1, 1),
+        "right": min(state.page + 1, state.total_pages),
+        ">": min(state.page + 1, state.total_pages),
+    }
+    return replace(state, page=targets[key], scroll=0)
+
+
+def _move_viewport(state: PageState, key: str, viewport_rows: int) -> PageState:
+    rows = max(1, viewport_rows)
+    max_scroll = max(0, len(state.lines) - rows)
+    deltas = {
+        "j": 1,
+        "down": 1,
+        "k": -1,
+        "up": -1,
+        " ": rows,
+        "f": rows,
+        "b": -rows,
+    }
+    scroll = max(0, min(state.scroll + deltas[key], max_scroll))
+    return replace(state, scroll=scroll)
 
 
 def jump_to_page(state: PageState, target: int) -> PageState:
@@ -75,10 +97,10 @@ def jump_to_page(state: PageState, target: int) -> PageState:
         1
     """
     page = max(1, min(target, state.total_pages))
-    return _replace(state, page=page, scroll=0, goto_page=False)
+    return replace(state, page=page, scroll=0, goto_page=False)
 
 
-def set_search_query(state: PageState, query: str) -> PageState:
+def set_search_query(state: PageState, query: str, viewport_rows: int = 1) -> PageState:
     """Commit a search query and exit search-input mode.
 
     Called by the TUI layer after the user finishes typing a / query.
@@ -89,19 +111,15 @@ def set_search_query(state: PageState, query: str) -> PageState:
         >>> set_search_query(s, "kernel").search_query
         'kernel'
     """
-    return _replace(state, search_query=query, searching=False)
-
-
-def _replace(state: PageState, **changes: object) -> PageState:
-    return PageState(
-        book_id=changes.get("book_id", state.book_id),  # type: ignore[arg-type]
-        title=changes.get("title", state.title),  # type: ignore[arg-type]
-        page=changes.get("page", state.page),  # type: ignore[arg-type]
-        total_pages=changes.get("total_pages", state.total_pages),  # type: ignore[arg-type]
-        scroll=changes.get("scroll", state.scroll),  # type: ignore[arg-type]
-        search_query=changes.get("search_query", state.search_query),  # type: ignore[arg-type]
-        lines=changes.get("lines", state.lines),  # type: ignore[arg-type]
-        quit=changes.get("quit", state.quit),  # type: ignore[arg-type]
-        searching=changes.get("searching", state.searching),  # type: ignore[arg-type]
-        goto_page=changes.get("goto_page", state.goto_page),  # type: ignore[arg-type]
+    normalized_query = query.casefold().strip()
+    matching_line = next(
+        (index for index, line in enumerate(state.lines) if normalized_query in line.casefold()),
+        state.scroll,
+    )
+    max_scroll = max(0, len(state.lines) - max(1, viewport_rows))
+    return replace(
+        state,
+        search_query=query,
+        searching=False,
+        scroll=min(matching_line, max_scroll) if normalized_query else state.scroll,
     )

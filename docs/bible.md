@@ -36,11 +36,22 @@ cachear a página seguinte em background após cada carregamento.
 
 | Tecla | Ação |
 |---|---|
+| `←` / `→` (ou `<` / `>`) | Página anterior / próxima página |
+| `↑` / `↓` | Rola o conteúdo da página atual |
 | `n` / `p` | Próxima / anterior página |
 | `j` / `k` | Scroll de linha |
+| `Espaço` / `f` / `b` | Avança / avança / volta uma tela |
 | `g` / `G` | Primeira / última página |
 | `/` | Busca no texto da página |
+| `:` | Ir para uma página pelo número |
 | `q` | Sair |
+
+Também é possível clicar na metade direita do terminal para avançar e na
+metade esquerda para voltar. A roda do mouse rola o conteúdo da página.
+
+O texto ocupa uma área central de até 88 colunas e somente as linhas que cabem
+no terminal são exibidas. O cabeçalho e a barra de navegação permanecem fixos,
+inclusive em capítulos longos de EPUB.
 
 ## Configuração
 
