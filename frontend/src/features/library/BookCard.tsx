@@ -33,7 +33,10 @@ const STATUS_LABELS: Record<string, string> = {
 
 export function BookCard({ book, allTags }: Props) {
   const statusLabel = STATUS_LABELS[book.status] ?? book.status;
-  const isReady = book.status === "ready";
+  // The file is stored before embedding runs, so only a book still being
+  // ingested for the first time lacks a readable copy.
+  const isReadable = book.status !== "pending";
+  const isBusy = book.status === "pending" || book.status === "reembedding";
   const [dialog, setDialog] = useState<DialogKind>(null);
 
   const update = useUpdateBook();
@@ -57,17 +60,15 @@ export function BookCard({ book, allTags }: Props) {
   );
 
   return (
-    <article className={styles.card} aria-busy={!isReady}>
+    <article className={styles.card} aria-busy={isBusy}>
       <div className={styles.coverWrap}>
-        {isReady ? <Link to={`/book/${book.id}`}>{cover}</Link> : cover}
+        {isReadable ? <Link to={`/book/${book.id}`}>{cover}</Link> : cover}
         {statusLabel && (
           <span className={book.status === "failed" ? styles.badgeError : styles.badge}>
             {statusLabel}
           </span>
         )}
-        {(book.status === "pending" || book.status === "reembedding") && (
-          <div className={styles.progressBar} aria-hidden="true" />
-        )}
+        {isBusy && <div className={styles.progressBar} aria-hidden="true" />}
         <BookActionsMenu
           onRename={() => setDialog("rename")}
           onEditTags={() => setDialog("tags")}
@@ -77,7 +78,7 @@ export function BookCard({ book, allTags }: Props) {
       </div>
       <div className={styles.meta}>
         <h3 className={styles.title} title={book.title}>
-          {isReady ? <Link to={`/book/${book.id}`}>{book.title}</Link> : book.title}
+          {isReadable ? <Link to={`/book/${book.id}`}>{book.title}</Link> : book.title}
         </h3>
         {book.author && <p className={styles.author}>{book.author}</p>}
         {book.tags.length > 0 && (
@@ -100,9 +101,7 @@ export function BookCard({ book, allTags }: Props) {
           isPending={update.isPending}
           errorMessage={update.error?.message}
           onClose={close}
-          onSubmit={(title) =>
-            update.mutate({ id: book.id, title }, { onSuccess: close })
-          }
+          onSubmit={(title) => update.mutate({ id: book.id, title }, { onSuccess: close })}
         />
       )}
 

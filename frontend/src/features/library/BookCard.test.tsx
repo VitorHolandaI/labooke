@@ -51,4 +51,17 @@ describe("BookCard", () => {
     expect(screen.getByText(/failed/i)).toBeInTheDocument();
     expect(screen.getByText("encrypted PDF")).toBeInTheDocument();
   });
+
+  // Regression: a failed embedding left the book unreachable from the grid,
+  // even though its file is stored and /book/:id reads it fine.
+  it("still links to the book when embedding failed", () => {
+    renderCard(book({ status: "failed", ingest_error: "ollama timeout" }));
+    const links = screen.getAllByRole("link");
+    expect(links[0]).toHaveAttribute("href", "/book/7");
+  });
+
+  it("still links to the book while re-embedding", () => {
+    renderCard(book({ status: "reembedding" }));
+    expect(screen.getAllByRole("link")[0]).toHaveAttribute("href", "/book/7");
+  });
 });
