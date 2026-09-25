@@ -17,29 +17,45 @@
 
 .header {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
-  flex-wrap: wrap;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-2) var(--space-4);
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
   flex-shrink: 0;
 }
 
+/* Titles from shadow libraries run to four lines at full size and pushed
+   the page below the fold on laptops; keep the header to one line. */
+.heading {
+  flex: 1;
+  min-width: 0;
+}
+
 .title {
   margin: 0;
-  font-size: var(--font-size-2xl);
+  font-size: 1.1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .author {
+  margin: 0;
+  font-size: 0.85rem;
   color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .tagBar {
   display: flex;
   gap: var(--space-2);
-  flex-wrap: wrap;
+  flex-shrink: 0;
+  max-width: 40%;
+  overflow-x: auto;
 }
 
 .tagChip {
@@ -99,10 +115,6 @@
 
   .title {
     font-size: 0.9rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 55vw;
   }
 
   .author {

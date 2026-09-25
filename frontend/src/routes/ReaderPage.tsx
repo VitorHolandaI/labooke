@@ -51,8 +51,7 @@ export default function ReaderPage() {
   }, []);
 
   if (book.isLoading) return <p className={styles.loading}>Loading…</p>;
-  if (book.isError || !book.data)
-    return <p className={styles.error}>Failed to load book.</p>;
+  if (book.isError || !book.data) return <p className={styles.error}>Failed to load book.</p>;
 
   const initial = jumpTarget ?? progress.data?.page_no ?? 1;
   const format = book.data.format;
@@ -93,20 +92,18 @@ export default function ReaderPage() {
       />
     );
   } else {
-    viewer = (
-      <div className={styles.unsupported}>Unsupported format: {format}</div>
-    );
+    viewer = <div className={styles.unsupported}>Unsupported format: {format}</div>;
   }
 
   return (
     <div className={styles.layout}>
       <div className={styles.main}>
         <header className={styles.header}>
-          <div>
-            <h1 className={styles.title}>{book.data.title}</h1>
-            {book.data.author && (
-              <p className={styles.author}>{book.data.author}</p>
-            )}
+          <div className={styles.heading}>
+            <h1 className={styles.title} title={book.data.title}>
+              {book.data.title}
+            </h1>
+            {book.data.author && <p className={styles.author}>{book.data.author}</p>}
           </div>
           <div className={styles.tagBar}>
             {book.data.tags.map((tag) => (
@@ -119,18 +116,12 @@ export default function ReaderPage() {
                 {tag.name}
               </button>
             ))}
-            <button
-              type="button"
-              className={styles.editTags}
-              onClick={() => setEditingTags(true)}
-            >
+            <button type="button" className={styles.editTags} onClick={() => setEditingTags(true)}>
               Editar tags
             </button>
           </div>
         </header>
-        <Suspense fallback={<p className={styles.loading}>Loading viewer…</p>}>
-          {viewer}
-        </Suspense>
+        <Suspense fallback={<p className={styles.loading}>Loading viewer…</p>}>{viewer}</Suspense>
       </div>
       <BookmarkDrawer
         bookId={bookId}
