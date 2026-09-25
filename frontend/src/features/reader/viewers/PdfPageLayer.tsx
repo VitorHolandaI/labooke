@@ -2,6 +2,7 @@ import { TextLayer } from "pdfjs-dist";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { useEffect, useRef, useState } from "react";
 
+import { fitPageScale } from "./pdfPageFit";
 import { normalizePdfText } from "./pdfSearch";
 import styles from "./PdfViewer.module.css";
 
@@ -44,9 +45,7 @@ export function PdfPageLayer({ pdf, pageNumber, availableWidth, availableHeight,
         if (cancelled || !shell || !canvas || !text) return;
 
         const base = pdfPage.getViewport({ scale: 1 });
-        const widthScale = availableWidth / base.width;
-        const heightScale = availableHeight > 0 ? availableHeight / base.height : widthScale;
-        const scale = Math.max(widthScale, heightScale) * 0.98;
+        const scale = fitPageScale(base, availableWidth, availableHeight);
         const viewport = pdfPage.getViewport({ scale });
         const outputViewport = pdfPage.getViewport({
           scale: scale * (window.devicePixelRatio || 1),
