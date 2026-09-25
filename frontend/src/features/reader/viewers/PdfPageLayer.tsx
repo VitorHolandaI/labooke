@@ -11,6 +11,7 @@ interface Props {
   pageNumber: number;
   availableWidth: number;
   availableHeight: number;
+  zoom: number;
   query: string;
 }
 
@@ -23,7 +24,14 @@ function highlightMatches(textLayer: TextLayer, query: string) {
 }
 
 /** Render one PDF page with aligned canvas and selectable text layers. */
-export function PdfPageLayer({ pdf, pageNumber, availableWidth, availableHeight, query }: Props) {
+export function PdfPageLayer({
+  pdf,
+  pageNumber,
+  availableWidth,
+  availableHeight,
+  zoom,
+  query,
+}: Props) {
   const shellRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const textRef = useRef<HTMLDivElement | null>(null);
@@ -45,7 +53,7 @@ export function PdfPageLayer({ pdf, pageNumber, availableWidth, availableHeight,
         if (cancelled || !shell || !canvas || !text) return;
 
         const base = pdfPage.getViewport({ scale: 1 });
-        const scale = fitPageScale(base, availableWidth, availableHeight);
+        const scale = fitPageScale(base, availableWidth, availableHeight) * zoom;
         const viewport = pdfPage.getViewport({ scale });
         const outputViewport = pdfPage.getViewport({
           scale: scale * (window.devicePixelRatio || 1),
@@ -78,7 +86,7 @@ export function PdfPageLayer({ pdf, pageNumber, availableWidth, availableHeight,
       textLayer?.cancel();
       textLayerRef.current = null;
     };
-  }, [pdf, pageNumber, availableWidth, availableHeight]);
+  }, [pdf, pageNumber, availableWidth, availableHeight, zoom]);
 
   useEffect(() => {
     if (textLayerRef.current) highlightMatches(textLayerRef.current, query);

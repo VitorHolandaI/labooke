@@ -4,10 +4,12 @@ import type { PDFDocumentProxy } from "pdfjs-dist";
 import { useCallback, useEffect, useReducer, useState } from "react";
 
 import { bookFileUrl } from "../../../api/reader";
+import { usePdfZoom } from "../hooks/usePdfZoom";
 import { useSwipeGesture } from "../hooks/useSwipeGesture";
 import { PageJump } from "./PageJump";
 import { PdfPageLayer } from "./PdfPageLayer";
 import { PdfSearchControls } from "./PdfSearchControls";
+import { PdfZoomControls } from "./PdfZoomControls";
 import styles from "./PdfViewer.module.css";
 
 GlobalWorkerOptions.workerSrc = PdfWorker;
@@ -52,6 +54,7 @@ export function PdfViewer({
   const [layout, setLayout] = useState<Layout>("single");
   const [fullscreen, setFullscreen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const { zoom, zoomIn, zoomOut, resetZoom } = usePdfZoom();
   const [containerSize, setContainerSize] = useState({ w: 0, h: 0 });
   // Callback ref: ResizeObserver is set up when the element actually mounts,
   // not at component mount (which happens while still in loading state).
@@ -122,11 +125,20 @@ export function PdfViewer({
         goPrev();
       } else if (e.key === "Escape" && fullscreen) {
         setFullscreen(false);
+      } else if (e.ctrlKey || e.metaKey) {
+        // Ctrl/Cmd +/- is the browser's own zoom; don't stack ours on it.
+        return;
+      } else if (e.key === "+" || e.key === "=") {
+        zoomIn();
+      } else if (e.key === "-") {
+        zoomOut();
+      } else if (e.key === "0") {
+        resetZoom();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [total, goNext, goPrev, fullscreen]);
+  }, [total, goNext, goPrev, fullscreen, zoomIn, zoomOut, resetZoom]);
 
   // Tap left/right edges to navigate (mobile-friendly)
   const handleCanvasAreaClick = useCallback(
@@ -167,6 +179,7 @@ export function PdfViewer({
           →
         </button>
         <div className={styles.controlsSep} />
+        <PdfZoomControls zoom={zoom} onZoomIn={zoomIn} onZoomOut={zoomOut} onReset={resetZoom} />
         {onAddBookmark && (
           <button
             type="button"
@@ -217,6 +230,7 @@ export function PdfViewer({
             pageNumber={page}
             availableWidth={pageWidth}
             availableHeight={containerSize.h}
+            zoom={zoom}
             query={searchQuery}
           />
         )}
@@ -226,6 +240,7 @@ export function PdfViewer({
             pageNumber={page + 1}
             availableWidth={pageWidth}
             availableHeight={containerSize.h}
+            zoom={zoom}
             query={searchQuery}
           />
         )}

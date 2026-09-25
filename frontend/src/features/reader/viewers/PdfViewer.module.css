@@ -85,6 +85,34 @@
   flex: 1;
 }
 
+.zoom {
+  display: inline-flex;
+  gap: var(--space-1);
+  font-variant-numeric: tabular-nums;
+}
+
+.zoom > button {
+  min-width: 2.25rem;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.zoom > button:hover:not(:disabled) {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.zoom > button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 .counter {
   font-variant-numeric: tabular-nums;
   font-size: 0.9rem;
@@ -94,13 +122,14 @@
 }
 
 /* Single page: centered in the scrollable area */
+/* "safe" keeps a zoomed page scrollable from its top-left edge; plain
+   center pushes the overflow out of the scroll box and clips it. */
 .canvasWrap {
   flex: 1;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: auto;
   background: var(--color-bg);
   display: flex;
-  justify-content: center;
+  justify-content: safe center;
   align-items: flex-start;
   padding: 0;
   cursor: pointer;
@@ -113,8 +142,8 @@
   background: var(--color-bg);
   display: flex;
   flex-direction: row;
-  justify-content: center;
-  align-items: center;
+  justify-content: safe center;
+  align-items: safe center;
   gap: var(--space-2);
   padding: var(--space-3);
 }
