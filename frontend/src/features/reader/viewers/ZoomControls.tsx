@@ -1,15 +1,17 @@
-import { ZOOM_MAX, ZOOM_MIN } from "./pdfZoom";
-import styles from "./PdfViewer.module.css";
+import { ZOOM_MAX, ZOOM_MIN } from "./readerZoom";
+import styles from "./ZoomControls.module.css";
 
 interface Props {
   zoom: number;
+  /** What the percentage button goes back to, e.g. "Página inteira". */
+  resetTitle: string;
   onZoomIn: () => void;
   onZoomOut: () => void;
   onReset: () => void;
 }
 
-/** Zoom buttons for the PDF toolbar; the percentage resets to fit-page. */
-export function PdfZoomControls({ zoom, onZoomIn, onZoomOut, onReset }: Props) {
+/** Zoom buttons shared by every reader toolbar; the percentage resets to 100%. */
+export function ZoomControls({ zoom, resetTitle, onZoomIn, onZoomOut, onReset }: Props) {
   return (
     <div className={styles.zoom}>
       <button
@@ -21,7 +23,7 @@ export function PdfZoomControls({ zoom, onZoomIn, onZoomOut, onReset }: Props) {
       >
         −
       </button>
-      <button type="button" onClick={onReset} title="Página inteira (0)">
+      <button type="button" onClick={onReset} title={`${resetTitle} (0)`}>
         {Math.round(zoom * 100)}%
       </button>
       <button

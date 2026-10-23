@@ -4,13 +4,26 @@ import JSZip from "jszip";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { bookFileUrl } from "../../../api/reader";
+import { useElementSize } from "../hooks/useElementSize";
+import { useReaderKeyboard } from "../hooks/useReaderKeyboard";
+import { EPUB_ZOOM_KEY, useReaderZoom } from "../hooks/useReaderZoom";
 import { useSwipeGesture } from "../hooks/useSwipeGesture";
+import { EPUB_SPREAD_MIN_WIDTH, epubSpread, type ReaderLayout } from "./epubLayout";
 import { PageJump } from "./PageJump";
+import { zoomFontSize } from "./readerZoom";
+import { ZoomControls } from "./ZoomControls";
 import styles from "./EpubViewer.module.css";
 
 // The UMD build of epubjs (selected by Vite via the package "browser"
 // field) resolves JSZip from the global scope — see gotchas/epub-viewer-bug.md.
 (window as { JSZip?: unknown }).JSZip = JSZip;
+
+// Reflowed text keeps the old scroll offset, which can land mid-page;
+// re-displaying the current location snaps back to the same spot.
+function redisplayCurrent(rendition: Rendition): void {
+  const cfi = rendition.location?.start.cfi;
+  if (cfi) void rendition.display(cfi);
+}
 
 interface Props {
   bookId: number;
@@ -34,6 +47,18 @@ export function EpubViewer({ bookId, initialPage = 1, onPageChange, isBookmarked
   const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  const [layout, setLayout] = useState<ReaderLayout>("single");
+  const { zoom, zoomIn, zoomOut, resetZoom } = useReaderZoom(EPUB_ZOOM_KEY);
+  // Same ref trick as initialPage: the rendition is built once per book and
+  // picks up the current layout and zoom when it is created.
+  const layoutRef = useRef(layout);
+  const zoomRef = useRef(zoom);
+  const [viewportEl, setViewportEl] = useState<HTMLDivElement | null>(null);
+  const viewportSize = useElementSize(viewportEl);
+  const attachViewport = useCallback((el: HTMLDivElement | null) => {
+    containerRef.current = el;
+    setViewportEl(el);
+  }, []);
 
   const jump = useCallback(
     (pageNo: number) => {
@@ -71,7 +96,10 @@ export function EpubViewer({ bookId, initialPage = 1, onPageChange, isBookmarked
           width: "100%",
           height: "100%",
           flow: "paginated",
+          spread: epubSpread(layoutRef.current),
+          minSpreadWidth: EPUB_SPREAD_MIN_WIDTH,
         });
+        rendition.themes.fontSize(zoomFontSize(zoomRef.current));
         renditionRef.current = rendition;
         rendition.display();
 
@@ -112,16 +140,31 @@ export function EpubViewer({ bookId, initialPage = 1, onPageChange, isBookmarked
     };
   }, [bookId]);
 
-  // Keyboard navigation
+  // epubjs only re-measures on window resize (stage.js onResize), but
+  // fullscreen and the layout toggle resize the viewport without one.
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight" || e.key === "ArrowDown") { e.preventDefault(); next(); }
-      else if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); prev(); }
-      else if (e.key === "Escape" && fullscreen) setFullscreen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [next, prev, fullscreen]);
+    if (viewportSize.w === 0 || viewportSize.h === 0) return;
+    renditionRef.current?.resize(viewportSize.w, viewportSize.h);
+  }, [viewportSize]);
+
+  useEffect(() => {
+    layoutRef.current = layout;
+    const rendition = renditionRef.current;
+    if (!rendition) return;
+    rendition.spread(epubSpread(layout), EPUB_SPREAD_MIN_WIDTH);
+    redisplayCurrent(rendition);
+  }, [layout]);
+
+  useEffect(() => {
+    zoomRef.current = zoom;
+    const rendition = renditionRef.current;
+    if (!rendition) return;
+    rendition.themes.fontSize(zoomFontSize(zoom));
+    redisplayCurrent(rendition);
+  }, [zoom]);
+
+  const exitFullscreen = useCallback(() => setFullscreen(false), []);
+  useReaderKeyboard({ next, prev, exitFullscreen, zoomIn, zoomOut, resetZoom }, true);
 
   useEffect(() => {
     if (total > 0) onPageChange?.(location);
@@ -141,6 +184,13 @@ export function EpubViewer({ bookId, initialPage = 1, onPageChange, isBookmarked
         <PageJump current={location} total={total} onJump={jump} />
         <button type="button" onClick={next}>Next →</button>
         <div className={styles.controlsSep} />
+        <ZoomControls
+          zoom={zoom}
+          resetTitle="Fonte padrão"
+          onZoomIn={zoomIn}
+          onZoomOut={zoomOut}
+          onReset={resetZoom}
+        />
         {onAddBookmark && (
           <button
             type="button"
@@ -154,6 +204,14 @@ export function EpubViewer({ bookId, initialPage = 1, onPageChange, isBookmarked
         )}
         <button
           type="button"
+          className={`${layout === "double" ? styles.ctrlActive : styles.ctrl} ${styles.ctrlDesktop}`}
+          onClick={() => setLayout((l) => (l === "single" ? "double" : "single"))}
+          title="Alternar entre 1 e 2 páginas"
+        >
+          {layout === "single" ? "⊟ 2 pág." : "⊞ 1 pág."}
+        </button>
+        <button
+          type="button"
           className={fullscreen ? styles.ctrlActive : styles.ctrl}
           onClick={() => setFullscreen((f) => !f)}
           title={fullscreen ? "Sair da tela cheia (Esc)" : "Tela cheia"}
@@ -162,7 +220,10 @@ export function EpubViewer({ bookId, initialPage = 1, onPageChange, isBookmarked
         </button>
       </div>
       {error && <div className={styles.error}>Failed to load: {error}</div>}
-      <div ref={containerRef} className={styles.viewport} />
+      <div
+        ref={attachViewport}
+        className={layout === "double" ? styles.viewport : styles.viewportSingle}
+      />
     </div>
   );
 }

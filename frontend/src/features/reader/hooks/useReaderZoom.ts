@@ -1,12 +1,15 @@
 import { useCallback, useState } from "react";
 
-import { parseStoredZoom, stepZoom } from "../viewers/pdfZoom";
+import { parseStoredZoom, stepZoom } from "../viewers/readerZoom";
 
+// The PDF key predates the other formats; renaming it would drop saved zooms.
 export const PDF_ZOOM_KEY = "labooke.pdfZoom";
+export const EPUB_ZOOM_KEY = "labooke.epubZoom";
+export const TEXT_ZOOM_KEY = "labooke.textZoom";
 
 export type ZoomStorage = Pick<Storage, "getItem" | "setItem">;
 
-export interface PdfZoom {
+export interface ReaderZoom {
   zoom: number;
   zoomIn: () => void;
   zoomOut: () => void;
@@ -14,19 +17,22 @@ export interface PdfZoom {
 }
 
 /**
- * PDF zoom level remembered per browser, so a laptop keeps its setting.
+ * Zoom level remembered per browser and format, so a laptop keeps its setting.
  *
- * Example: `const { zoom, zoomIn } = usePdfZoom();`
+ * Example: `const { zoom, zoomIn } = useReaderZoom(PDF_ZOOM_KEY);`
  */
-export function usePdfZoom(storage: ZoomStorage = window.localStorage): PdfZoom {
-  const [zoom, setZoom] = useState(() => parseStoredZoom(storage.getItem(PDF_ZOOM_KEY)));
+export function useReaderZoom(
+  storageKey: string,
+  storage: ZoomStorage = window.localStorage,
+): ReaderZoom {
+  const [zoom, setZoom] = useState(() => parseStoredZoom(storage.getItem(storageKey)));
 
   const applyZoom = useCallback(
     (next: number) => {
       setZoom(next);
-      storage.setItem(PDF_ZOOM_KEY, String(next));
+      storage.setItem(storageKey, String(next));
     },
-    [storage],
+    [storage, storageKey],
   );
 
   // Stable callbacks keep the viewer's keydown listener from re-binding.

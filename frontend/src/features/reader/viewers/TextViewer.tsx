@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 
 import { bookFileUrl } from "../../../api/reader";
+import { useReaderKeyboard } from "../hooks/useReaderKeyboard";
+import { TEXT_ZOOM_KEY, useReaderZoom } from "../hooks/useReaderZoom";
 import { useSwipeGesture } from "../hooks/useSwipeGesture";
 import { PageJump } from "./PageJump";
+import { zoomFontSize } from "./readerZoom";
+import { ZoomControls } from "./ZoomControls";
 import styles from "./TextViewer.module.css";
 
 interface Props {
@@ -104,6 +108,7 @@ export function TextViewer({
   const [fetch_, dispatch] = useReducer(fetchReducer, { phase: "loading" });
   const [page, setPage] = useState(initialPage);
   const [fullscreen, setFullscreen] = useState(false);
+  const { zoom, zoomIn, zoomOut, resetZoom } = useReaderZoom(TEXT_ZOOM_KEY);
 
   // Compute pages early so goNext/goPrev can reference totalPages
   const text = fetch_.phase === "ready" ? fetch_.text : null;
@@ -151,17 +156,11 @@ export function TextViewer({
     };
   }, [bookId]);
 
-  // Keyboard navigation
-  useEffect(() => {
-    if (totalPages === 0) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight" || e.key === "ArrowDown") { e.preventDefault(); setPage((p) => Math.min(totalPages, p + 1)); }
-      else if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); setPage((p) => Math.max(1, p - 1)); }
-      else if (e.key === "Escape" && fullscreen) setFullscreen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [totalPages, fullscreen]);
+  const exitFullscreen = useCallback(() => setFullscreen(false), []);
+  useReaderKeyboard(
+    { next: goNext, prev: goPrev, exitFullscreen, zoomIn, zoomOut, resetZoom },
+    totalPages > 0,
+  );
 
   useEffect(() => {
     onPageChange?.(page);
@@ -172,6 +171,7 @@ export function TextViewer({
 
   const current = pages[Math.min(page, totalPages) - 1] ?? "";
   const html = format === "md" ? renderMarkdown(current) : null;
+  const textStyle = { fontSize: zoomFontSize(zoom) };
 
   return (
     <div
@@ -199,6 +199,13 @@ export function TextViewer({
           Next →
         </button>
         <div className={styles.controlsSep} />
+        <ZoomControls
+          zoom={zoom}
+          resetTitle="Fonte padrão"
+          onZoomIn={zoomIn}
+          onZoomOut={zoomOut}
+          onReset={resetZoom}
+        />
         {onAddBookmark && (
           <button
             type="button"
@@ -222,10 +229,13 @@ export function TextViewer({
       {format === "md" && html !== null ? (
         <article
           className={styles.markdown}
+          style={textStyle}
           dangerouslySetInnerHTML={{ __html: html }}
         />
       ) : (
-        <pre className={styles.plain}>{current}</pre>
+        <pre className={styles.plain} style={textStyle}>
+          {current}
+        </pre>
       )}
     </div>
   );

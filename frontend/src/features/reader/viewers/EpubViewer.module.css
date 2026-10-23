@@ -102,3 +102,23 @@
   padding: var(--space-3);
   color: var(--color-danger);
 }
+
+/* One page spanning a laptop screen gives unreadably long lines, so the
+   single layout is a centered page of book-like width. */
+.viewportSingle {
+  composes: viewport;
+  width: 100%;
+  max-width: 48rem;
+  margin: 0 auto;
+}
+
+/* Two pages need the width; same breakpoint as the PDF viewer. */
+.ctrlDesktop {
+  display: inline-flex;
+}
+
+@media (max-width: 640px) {
+  .ctrlDesktop {
+    display: none;
+  }
+}

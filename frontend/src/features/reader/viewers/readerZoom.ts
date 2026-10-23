@@ -1,4 +1,5 @@
-// Zoom multiplies the fit-page scale, so 1 always means "whole page visible".
+// 1 is each viewer's natural size: the fitted page for PDF, the book's own
+// font size for EPUB and text.
 export const ZOOM_MIN = 0.5;
 export const ZOOM_MAX = 3;
 export const ZOOM_STEP = 0.25;
@@ -23,4 +24,13 @@ export function parseStoredZoom(raw: string | null): number {
   if (raw === null || !Number.isFinite(value)) return 1;
   if (value < ZOOM_MIN || value > ZOOM_MAX) return 1;
   return value;
+}
+
+/**
+ * CSS font size that applies a zoom to the book's own text.
+ *
+ * Example: `zoomFontSize(1.25)` returns `"125%"`.
+ */
+export function zoomFontSize(zoom: number): string {
+  return `${Math.round(zoom * 100)}%`;
 }
