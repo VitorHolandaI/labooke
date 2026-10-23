@@ -1,4 +1,5 @@
 import sqlite3
+from datetime import UTC, datetime
 
 import pytest
 from labooke_core.domain.models import BookStatus
@@ -255,3 +256,22 @@ def test_find_rejects_unknown_tag_mode(repo):
         match="invalid tag_mode='xor'; expected 'all' or 'any'",
     ):
         repo.find(tag_mode="xor")
+
+
+def test_new_book_has_not_been_auto_tagged(repo):
+    assert make_book(repo, sha="fresh", title="Fresh").auto_tagged_at is None
+
+
+def test_mark_auto_tagged_records_when_the_llm_classified_it(repo):
+    book = make_book(repo, sha="tagged", title="Tagged")
+    at = datetime(2026, 10, 23, 12, 0, tzinfo=UTC)
+
+    updated = repo.mark_auto_tagged(book.id, at)
+
+    assert updated.auto_tagged_at == at
+    assert repo.get(book.id).auto_tagged_at == at
+
+
+def test_mark_auto_tagged_raises_for_missing_book(repo):
+    with pytest.raises(BookNotFound):
+        repo.mark_auto_tagged(999, datetime(2026, 1, 1, tzinfo=UTC))

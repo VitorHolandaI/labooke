@@ -61,7 +61,17 @@ class ReembedService:
             >>> service.reembed_all.__name__
             'reembed_all'
         """
-        return [self.reembed_book(book.id) for book in self._books.list_all()]
+        return self.reembed_many([book.id for book in self._books.list_all()])
+
+    def reembed_many(self, book_ids: Sequence[int]) -> list[Book]:
+        """Schedule reembedding for the listed books, in the given order.
+
+        Example:
+            >>> service = ReembedService(None, None)
+            >>> service.reembed_many([])
+            []
+        """
+        return [self.reembed_book(book_id) for book_id in book_ids]
 
     def _run_reembed(self, book_id: int) -> None:
         try:

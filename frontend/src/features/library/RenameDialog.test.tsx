@@ -15,6 +15,7 @@ function book(overrides: Partial<BookOut> = {}): BookOut {
     page_count: 100,
     status: "ready",
     ingest_error: null,
+    auto_tagged_at: null,
     tags: [],
     ...overrides,
   };

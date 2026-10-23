@@ -1,54 +1,51 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 
 import { server } from "../../test/mswServer";
 import { AdminSummaries } from "./AdminSummaries";
+import { adminBook } from "./test/adminBooks";
+import { renderAdmin } from "./test/renderAdmin";
 
-const summarizedBook = {
-  id: 7,
-  sha256: "book-7",
-  title: "Sistemas Distribuídos",
-  author: null,
-  description: "Consenso, replicação e tolerância a falhas.",
-  format: "pdf",
-  page_count: 200,
-  status: "ready",
-  ingest_error: null,
-  tags: [],
-};
+const summarized = adminBook({ id: 7, title: "Sistemas Distribuídos" });
+const unsummarized = adminBook({ id: 8, title: "Redes", description: null });
 
-function renderSummaries() {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  return render(
-    <QueryClientProvider client={client}>
-      <AdminSummaries />
-    </QueryClientProvider>,
+function serveBooks() {
+  server.use(
+    http.get("*/api/config", () => HttpResponse.json({ llm_summary_pages: 10, llm_enabled: true })),
+    http.get("*/api/books", () =>
+      HttpResponse.json({ items: [summarized, unsummarized], total: 2 }),
+    ),
   );
 }
 
 describe("AdminSummaries", () => {
-  it("schedules selected summarized books for auto-tagging", async () => {
+  it("summarizes only the books still missing a summary", async () => {
     const user = userEvent.setup();
+    serveBooks();
+    let sent: unknown;
     server.use(
-      http.get("*/api/config", () =>
-        HttpResponse.json({ llm_summary_pages: 10, llm_enabled: true }),
-      ),
-      http.get("*/api/books", () => HttpResponse.json({ items: [summarizedBook], total: 1 })),
-      http.post("*/api/admin/tags/auto", async ({ request }) => {
-        expect(await request.json()).toEqual({ book_ids: [7] });
-        return HttpResponse.json({ book_ids: [7] }, { status: 202 });
+      http.post("*/api/admin/summaries/batch", async ({ request }) => {
+        sent = await request.json();
+        return HttpResponse.json({ book_ids: [8] }, { status: 202 });
       }),
     );
-    renderSummaries();
+    renderAdmin(<AdminSummaries />);
 
-    await user.click(await screen.findByRole("checkbox"));
-    await user.click(screen.getByRole("button", { name: "Taguear com IA (1)" }));
+    await screen.findByRole("checkbox", { name: /Redes/ });
+    await user.click(screen.getByRole("button", { name: "Marcar sem resumo" }));
+    await user.click(screen.getByRole("button", { name: "Resumir marcados (1)" }));
 
-    expect(await screen.findByText(/Tagueamento iniciado no servidor/)).toBeInTheDocument();
+    await screen.findByText(/Processando/);
+    expect(sent).toEqual({ book_ids: [8], pages: 10 });
+  });
+
+  it("marks which books already have a summary", async () => {
+    serveBooks();
+    renderAdmin(<AdminSummaries />);
+
+    expect(await screen.findByRole("checkbox", { name: /Feito.*Sistemas/ })).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /Pendente.*Redes/ })).toBeInTheDocument();
   });
 });

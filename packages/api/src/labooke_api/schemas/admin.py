@@ -57,6 +57,12 @@ class AutoTagBatchOut(BaseModel):
     book_ids: list[int]
 
 
+class ReembedBatchRequest(BaseModel):
+    """Books to rebuild chunk and summary vectors for, one after another."""
+
+    book_ids: list[int] = Field(min_length=1, max_length=500)
+
+
 class InvalidateSummariesOut(BaseModel):
     """Payload returned after invalidating all book summaries."""
 

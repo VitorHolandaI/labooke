@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -85,3 +86,14 @@ def test_filter_books_by_tag(client: TestClient, container: AppContainer) -> Non
 
     response = client.get("/api/books", params={"tags": tag["id"]})
     assert [item["id"] for item in response.json()["items"]] == [a]
+
+
+def test_book_payload_reports_when_the_llm_tagged_it(
+    client: TestClient, container: AppContainer
+) -> None:
+    book_id = _insert_book(container, sha256="ai", title="AI tagged")
+    assert client.get(f"/api/books/{book_id}").json()["auto_tagged_at"] is None
+
+    container.books.mark_auto_tagged(book_id, datetime(2026, 10, 23, 12, 0, tzinfo=UTC))
+
+    assert client.get(f"/api/books/{book_id}").json()["auto_tagged_at"] == "2026-10-23T12:00:00Z"

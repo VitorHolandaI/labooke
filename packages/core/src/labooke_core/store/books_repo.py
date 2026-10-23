@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import sqlite3
 from collections.abc import Sequence
+from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -22,7 +23,8 @@ if TYPE_CHECKING:
     from labooke_core.store.db import LockedConnection
 
 _BOOK_COLUMNS = (
-    "id, sha256, path, title, author, description, format, page_count, status, ingest_error"
+    "id, sha256, path, title, author, description, format, page_count, status, ingest_error, "
+    "auto_tagged_at"
 )
 
 
@@ -39,6 +41,7 @@ def _row_to_book(row: sqlite3.Row | tuple) -> Book:
         page_count=row[7],
         status=BookStatus(row[8]),
         ingest_error=row[9],
+        auto_tagged_at=datetime.fromisoformat(row[10]) if row[10] is not None else None,
         tags=[],
     )
 
@@ -337,6 +340,24 @@ class BooksRepo:
         """
         self.get(book_id)
         self._conn.execute("UPDATE books SET description = ? WHERE id = ?", (description, book_id))
+        self._conn.commit()
+        return self.get(book_id)
+
+    def mark_auto_tagged(self, book_id: int, at: datetime) -> Book:
+        """Record that the LLM classified ``book_id`` at ``at``.
+
+        Example:
+            >>> from datetime import UTC, datetime
+            >>> from labooke_core.store.db import open_db
+            >>> repo = BooksRepo(open_db(":memory:", seed_tags=False))
+            >>> book = repo.insert(sha256="abc", path="/tmp/x.pdf", title="X", format="pdf")
+            >>> repo.mark_auto_tagged(book.id, datetime(2026, 1, 1, tzinfo=UTC)).auto_tagged_at.year
+            2026
+        """
+        self.get(book_id)
+        self._conn.execute(
+            "UPDATE books SET auto_tagged_at = ? WHERE id = ?", (at.isoformat(), book_id)
+        )
         self._conn.commit()
         return self.get(book_id)
 

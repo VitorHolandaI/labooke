@@ -61,5 +61,6 @@ Ambos retornam `503 llm_unavailable` se o LLM não estiver configurado.
 |--------|-----------------------|--------------------------------------|
 | POST   | `/api/admin/scan`     | Escaneia pasta inbox e ingere        |
 | POST   | `/api/admin/reembed-all` | Re-embebe todos os livros         |
+| POST   | `/api/admin/reembed-batch` `{book_ids}` | Re-embebe só os ids listados, em sequência (202) |
 
 `GET /healthz` — healthcheck (usado pelo Docker).

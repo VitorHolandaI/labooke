@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -56,3 +57,49 @@ def test_auto_tag_requires_a_summary_profile(repos):
 
     with pytest.raises(ValueError, match=f"book id={book.id}.*expected non-empty text"):
         AutoTagService(books, tags, _FakeChatClient('{"tag_ids":[]}')).tag_book(book.id)
+
+
+class _FixedClock:
+    def __init__(self, at: datetime) -> None:
+        self.at = at
+
+    def __call__(self) -> datetime:
+        return self.at
+
+
+_TAGGED_AT = datetime(2026, 10, 23, 9, 30, tzinfo=UTC)
+
+
+def test_auto_tag_marks_the_book_as_classified(repos):
+    books, tags = repos
+    distributed = tags.insert(name="Distribuídos", slug="distribuidos")
+    book = _book(books)
+    client = _FakeChatClient(f'{{"tag_ids":[{distributed.id}]}}')
+
+    AutoTagService(books, tags, client, clock=_FixedClock(_TAGGED_AT)).tag_book(book.id)
+
+    assert books.get(book.id).auto_tagged_at == _TAGGED_AT
+
+
+# A run where no tag fits still counts as done, or the admin list would keep
+# offering the same book forever.
+def test_auto_tag_marks_the_book_even_when_no_tag_fits(repos):
+    books, tags = repos
+    tags.insert(name="Culinária", slug="culinaria")
+    book = _book(books)
+    client = _FakeChatClient('{"tag_ids":[]}')
+
+    AutoTagService(books, tags, client, clock=_FixedClock(_TAGGED_AT)).tag_book(book.id)
+
+    assert books.get(book.id).auto_tagged_at == _TAGGED_AT
+
+
+def test_auto_tag_leaves_the_mark_unset_without_a_tag_vocabulary(repos):
+    books, tags = repos
+    book = _book(books)
+    client = _FakeChatClient('{"tag_ids":[]}')
+
+    AutoTagService(books, tags, client, clock=_FixedClock(_TAGGED_AT)).tag_book(book.id)
+
+    assert client.calls == []
+    assert books.get(book.id).auto_tagged_at is None

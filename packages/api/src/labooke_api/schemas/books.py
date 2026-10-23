@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from labooke_core.domain.models import Book
 from pydantic import BaseModel, Field
 
@@ -20,6 +22,7 @@ class BookOut(BaseModel):
     page_count: int
     status: str
     ingest_error: str | None
+    auto_tagged_at: datetime | None
     tags: list[TagOut]
 
     @classmethod
@@ -35,6 +38,7 @@ class BookOut(BaseModel):
             page_count=book.page_count,
             status=book.status.value,
             ingest_error=book.ingest_error,
+            auto_tagged_at=book.auto_tagged_at,
             tags=[TagOut.from_domain(tag) for tag in book.tags],
         )
 

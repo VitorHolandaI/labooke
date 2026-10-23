@@ -182,10 +182,15 @@
   white-space: nowrap;
 }
 
-.summarized {
+.markDone {
   color: var(--color-accent);
 }
 
-.noSummary {
+.markMissing {
   color: var(--color-text-muted);
+}
+
+.markBusy {
+  color: var(--color-text-muted);
+  font-style: italic;
 }

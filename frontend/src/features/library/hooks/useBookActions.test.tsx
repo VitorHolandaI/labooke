@@ -34,6 +34,7 @@ function stubBook() {
     page_count: 1,
     status: "ready",
     ingest_error: null,
+    auto_tagged_at: null,
     tags: [],
   };
 }

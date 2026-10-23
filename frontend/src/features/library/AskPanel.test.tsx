@@ -18,6 +18,7 @@ const recommendedBook = {
   page_count: 200,
   status: "ready",
   ingest_error: null,
+  auto_tagged_at: null,
   tags: [],
 };
 

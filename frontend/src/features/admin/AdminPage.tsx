@@ -2,6 +2,8 @@ import { useState } from "react";
 
 import type { ScanResultOut } from "../../api/admin";
 import { ConfirmDialog } from "../library/ConfirmDialog";
+import { AdminAutoTags } from "./AdminAutoTags";
+import { AdminEmbeddings } from "./AdminEmbeddings";
 import { AdminSummaries } from "./AdminSummaries";
 import { useConfig, useReembedAll, useScan, useUpdateConfig } from "./hooks/useAdmin";
 import styles from "./AdminPage.module.css";
@@ -165,7 +167,11 @@ export function AdminPage() {
         </div>
       </div>
 
+      <AdminEmbeddings />
+
       <AdminSummaries />
+
+      <AdminAutoTags />
 
       {confirmReembed && (
         <ConfirmDialog

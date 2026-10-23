@@ -23,6 +23,7 @@ from labooke_api.schemas import (
     AutoTagBatchRequest,
     BookCreateResponse,
     InvalidateSummariesOut,
+    ReembedBatchRequest,
     ScanResultOut,
     SummarizeBatchOut,
     SummarizeBatchRequest,
@@ -51,6 +52,21 @@ def scan_import_dir(scanner: ScannerDep) -> ScanResultOut:
 def reembed_all(reembed: ReembedDep) -> list[BookCreateResponse]:
     """Schedule reembedding for every stored book."""
     books = reembed.reembed_all()
+    return [BookCreateResponse(book_id=book.id, status=book.status.value) for book in books]
+
+
+@router.post(
+    "/api/admin/reembed-batch",
+    response_model=list[BookCreateResponse],
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def reembed_batch(body: ReembedBatchRequest, reembed: ReembedDep) -> list[BookCreateResponse]:
+    """Schedule reembedding for the listed books only.
+
+    One request keeps the rebuilds sequential; one call per book would
+    run them in parallel against the embedding server.
+    """
+    books = reembed.reembed_many(body.book_ids)
     return [BookCreateResponse(book_id=book.id, status=book.status.value) for book in books]
 
 

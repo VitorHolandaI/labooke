@@ -52,6 +52,7 @@ class Book(BaseModel):
     page_count: int = 0
     status: BookStatus = BookStatus.PENDING
     ingest_error: str | None = None
+    auto_tagged_at: datetime | None = None
     tags: list[Tag] = Field(default_factory=list)
 
     def require_path(self) -> Path:

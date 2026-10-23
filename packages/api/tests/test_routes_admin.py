@@ -44,3 +44,21 @@ def test_reembed_all_returns_one_payload_per_book(client_with_fake_pipeline):
     body = response.json()
     assert {entry["book_id"] for entry in body} == {first["book_id"], second["book_id"]}
     assert sorted(fake.rebuilt_books) == sorted({first["book_id"], second["book_id"]})
+
+
+def test_reembed_batch_rebuilds_only_the_listed_books(client_with_fake_pipeline):
+    client, fake = client_with_fake_pipeline
+    first = _upload(client, "a.txt")
+    _upload(client, "b.txt")
+    fake.rebuilt_books.clear()
+
+    response = client.post("/api/admin/reembed-batch", json={"book_ids": [first["book_id"]]})
+
+    assert response.status_code == 202
+    assert [entry["book_id"] for entry in response.json()] == [first["book_id"]]
+    assert fake.rebuilt_books == [first["book_id"]]
+
+
+def test_reembed_batch_rejects_an_empty_list(client_with_fake_pipeline):
+    client, _ = client_with_fake_pipeline
+    assert client.post("/api/admin/reembed-batch", json={"book_ids": []}).status_code == 422

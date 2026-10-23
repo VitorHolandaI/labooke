@@ -465,6 +465,8 @@ export interface components {
             status: string;
             /** Ingest Error */
             ingest_error: string | null;
+            /** Auto Tagged At */
+            auto_tagged_at: string | null;
             /** Tags */
             tags: components["schemas"]["TagOut"][];
         };

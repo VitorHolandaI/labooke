@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import {
-  autoTagBatch,
   invalidateSummaries,
   summarizeBatch,
   summarizeRandom,
@@ -10,7 +9,11 @@ import {
 } from "../../api/admin";
 import { useBooks } from "../library/hooks/useBooks";
 import { ConfirmDialog } from "../library/ConfirmDialog";
+import { AdminBookChecklist } from "./AdminBookChecklist";
+import { summaryMark } from "./bookMarks";
 import { useConfig } from "./hooks/useAdmin";
+import { useBookSelection } from "./hooks/useBookSelection";
+import { useBooksRefresh } from "./hooks/useBooksRefresh";
 import styles from "./AdminPage.module.css";
 
 export function AdminSummaries() {
@@ -19,20 +22,16 @@ export function AdminSummaries() {
   const configPages = config.data?.llm_summary_pages ?? 10;
   const [pages, setPages] = useState<string | null>(null);
   const [count, setCount] = useState(5);
-  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const selection = useBookSelection();
   const [confirmInvalidate, setConfirmInvalidate] = useState(false);
   const [processing, setProcessing] = useState(false);
-  const [tagging, setTagging] = useState(false);
 
   const effectivePages = pages === null ? configPages : Number(pages) || configPages;
 
   const booksQuery = useBooks({});
   const books = useMemo(() => booksQuery.data?.items ?? [], [booksQuery.data]);
   const missing = useMemo(() => books.filter((b) => !b.description).length, [books]);
-  const taggableIds = useMemo(
-    () => books.filter((book) => selected.has(book.id) && book.description).map((book) => book.id),
-    [books, selected],
-  );
+  useBooksRefresh(processing && missing > 0);
 
   const savePages = useMutation({
     mutationFn: (value: number) => updateConfig({ llm_summary_pages: value }),
@@ -42,7 +41,7 @@ export function AdminSummaries() {
   const invalidate = useMutation({
     mutationFn: invalidateSummaries,
     onSuccess: () => {
-      setSelected(new Set());
+      selection.clear();
       void queryClient.invalidateQueries({ queryKey: ["books"] });
     },
   });
@@ -50,45 +49,15 @@ export function AdminSummaries() {
   const random = useMutation({
     mutationFn: () => summarizeRandom(count, effectivePages),
     onSuccess: (data) => {
-      setSelected((current) => new Set([...current, ...data.book_ids]));
+      selection.addIds(data.book_ids);
       setProcessing(data.book_ids.length > 0);
     },
   });
 
   const batch = useMutation({
-    mutationFn: () => summarizeBatch([...selected], effectivePages),
-    onSuccess: () => setProcessing(selected.size > 0),
+    mutationFn: () => summarizeBatch([...selection.selected], effectivePages),
+    onSuccess: () => setProcessing(selection.selected.size > 0),
   });
-
-  const autoTag = useMutation({
-    mutationFn: () => autoTagBatch(taggableIds),
-    onSuccess: () => setTagging(taggableIds.length > 0),
-  });
-
-  useEffect(() => {
-    if ((!processing || missing === 0) && !tagging) return;
-    const handle = window.setInterval(() => {
-      void queryClient.invalidateQueries({ queryKey: ["books"] });
-    }, 5000);
-    return () => window.clearInterval(handle);
-  }, [processing, tagging, missing, queryClient]);
-
-  function toggle(id: number) {
-    setSelected((current) => {
-      const next = new Set(current);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  function selectAll() {
-    setSelected(new Set(books.map((b) => b.id)));
-  }
-
-  function clearAll() {
-    setSelected(new Set());
-  }
 
   return (
     <div className={styles.card}>
@@ -139,28 +108,19 @@ export function AdminSummaries() {
         </button>
       </div>
 
-      <div className={styles.row}>
-        <button type="button" className={styles.btn} onClick={selectAll}>
-          Marcar todos
-        </button>
-        <button type="button" className={styles.btn} onClick={clearAll}>
-          Desmarcar todos
-        </button>
+      <AdminBookChecklist
+        books={books}
+        selection={selection}
+        markOf={summaryMark}
+        selectMissingLabel="Marcar sem resumo"
+      >
         <button
           type="button"
           className={styles.btn}
           onClick={() => batch.mutate()}
-          disabled={batch.isPending || selected.size === 0}
+          disabled={batch.isPending || selection.selected.size === 0}
         >
-          {batch.isPending ? "Enviando…" : `Resumir marcados (${selected.size})`}
-        </button>
-        <button
-          type="button"
-          className={styles.btn}
-          onClick={() => autoTag.mutate()}
-          disabled={autoTag.isPending || taggableIds.length === 0 || !config.data?.llm_enabled}
-        >
-          {autoTag.isPending ? "Enviando…" : `Taguear com IA (${taggableIds.length})`}
+          {batch.isPending ? "Enviando…" : `Resumir marcados (${selection.selected.size})`}
         </button>
         <button
           type="button"
@@ -169,7 +129,7 @@ export function AdminSummaries() {
         >
           Invalidar todos
         </button>
-      </div>
+      </AdminBookChecklist>
 
       {processing && missing > 0 && (
         <p className={styles.result}>
@@ -178,36 +138,7 @@ export function AdminSummaries() {
         </p>
       )}
 
-      {tagging && (
-        <p className={styles.result}>
-          Tagueamento iniciado no servidor. A lista atualiza automaticamente.
-        </p>
-      )}
-
       {random.isError && <p className={styles.error}>{random.error?.message ?? "Falhou."}</p>}
-
-      <ul className={styles.bookList}>
-        {books.map((book) => {
-          const hasSummary = Boolean(book.description);
-          const checked = selected.has(book.id);
-          return (
-            <li key={book.id} className={styles.bookRow}>
-              <label className={styles.bookLabel}>
-                <input type="checkbox" checked={checked} onChange={() => toggle(book.id)} />
-                <span className={hasSummary ? styles.summarized : styles.noSummary}>
-                  {hasSummary ? "✓" : "✗"}
-                </span>
-                <span className={styles.bookTitle}>{book.title}</span>
-                {book.tags.length > 0 && (
-                  <span className={styles.bookTags}>
-                    {book.tags.map((tag) => tag.name).join(", ")}
-                  </span>
-                )}
-              </label>
-            </li>
-          );
-        })}
-      </ul>
 
       {confirmInvalidate && (
         <ConfirmDialog

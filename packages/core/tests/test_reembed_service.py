@@ -144,3 +144,25 @@ def test_reembed_skips_catalog_vector_without_description(tmp_path):
     )
     ReembedService(books, pipeline, summaries).reembed_book(book.id)
     assert summaries.knn(query=[2.0] * VEC_DIM, k=5) == []
+
+
+class RecordingPipeline:
+    def __init__(self):
+        self.rebuilt: list[int] = []
+
+    def rebuild(self, book):
+        self.rebuilt.append(book.id)
+        return 1
+
+
+def test_reembed_many_rebuilds_only_the_listed_books():
+    books = BooksRepo(open_db(":memory:", seed_tags=False))
+    first = books.insert(sha256="m1", path="/tmp/m1.txt", title="One", format="txt")
+    second = books.insert(sha256="m2", path="/tmp/m2.txt", title="Two", format="txt")
+    books.insert(sha256="m3", path="/tmp/m3.txt", title="Three", format="txt")
+    pipeline = RecordingPipeline()
+
+    updated = ReembedService(books, pipeline).reembed_many([second.id, first.id])
+
+    assert pipeline.rebuilt == [second.id, first.id]
+    assert [book.id for book in updated] == [second.id, first.id]

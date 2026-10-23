@@ -4,8 +4,9 @@ import { HttpResponse, http } from "msw";
 import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 
+import type { BookOut } from "../../../api/books";
 import { server } from "../../../test/mswServer";
-import { useBooks } from "./useBooks";
+import { booksPollingInterval, useBooks } from "./useBooks";
 
 function wrapper() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -34,5 +35,25 @@ describe("useBooks", () => {
     expect(url.searchParams.getAll("tags")).toEqual(["1", "2"]);
     expect(url.searchParams.getAll("exclude")).toEqual(["3"]);
     expect(url.searchParams.get("tag_mode")).toBe("all");
+  });
+});
+
+function listWith(...statuses: string[]) {
+  return { items: statuses.map((status, index) => ({ id: index, status }) as BookOut) };
+}
+
+describe("booksPollingInterval", () => {
+  it("polls while a book is still being ingested", () => {
+    expect(booksPollingInterval(listWith("ready", "pending"))).toBeGreaterThan(0);
+  });
+
+  // Regression: re-embedded books kept their spinner until a manual reload.
+  it("polls while a book is being re-embedded", () => {
+    expect(booksPollingInterval(listWith("reembedding"))).toBeGreaterThan(0);
+  });
+
+  it("stops once every book has settled", () => {
+    expect(booksPollingInterval(listWith("ready", "failed"))).toBe(false);
+    expect(booksPollingInterval(undefined)).toBe(false);
   });
 });

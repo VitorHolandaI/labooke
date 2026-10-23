@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
+from datetime import UTC, datetime
 
 from labooke_core.domain.models import Tag
 from labooke_core.llm import (
@@ -33,10 +34,13 @@ class AutoTagService:
         books: BooksRepo,
         tags: TagsRepo,
         chat_client: ChatClientSource = None,
+        *,
+        clock: Callable[[], datetime] = lambda: datetime.now(UTC),
     ) -> None:
         self._books = books
         self._tags = tags
         self._chat_client = chat_client
+        self._clock = clock
 
     def tag_book(self, book_id: int) -> list[Tag]:
         """Classify ``book_id`` and attach valid existing tags."""
@@ -52,6 +56,7 @@ class AutoTagService:
         selected = self._select(client, book.title, book.description, available)
         for tag_id in selected:
             self._tags.attach(book_id, tag_id)
+        self._books.mark_auto_tagged(book_id, self._clock())
         return self._tags.for_book(book_id)
 
     def tag_many(self, book_ids: Sequence[int]) -> list[tuple[int, str | None]]:

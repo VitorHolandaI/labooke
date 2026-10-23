@@ -64,3 +64,9 @@ export function autoTagBatch(bookIds: number[]) {
     body: { book_ids: bookIds },
   });
 }
+
+export function reembedBatch(bookIds: number[]) {
+  return api.post<BookCreateResponse[]>("/api/admin/reembed-batch", {
+    body: { book_ids: bookIds },
+  });
+}

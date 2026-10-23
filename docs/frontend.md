@@ -21,7 +21,7 @@ frontend/src/
 | `/`           | LibraryPage  | Grid de livros, upload, busca, tags|
 | `/read/:id`   | ReaderPage   | Leitor + sidebar de bookmarks      |
 | `/tags`       | TagsPage     | CRUD de tags, merge                |
-| `/admin`      | AdminPage    | Scan de pasta, re-ingest           |
+| `/admin`      | AdminPage    | Scan de pasta, re-ingest; listas separadas de embedding, resumo e tags do LLM |
 
 ## Tecnologias
 

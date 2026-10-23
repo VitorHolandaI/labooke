@@ -12,7 +12,7 @@ hand-rolled (sem Alembic) em
 
 | Tabela            | Colunas principais                                      | Papel                          |
 |-------------------|----------------------------------------------------------|--------------------------------|
-| `books`           | `id`, `sha256`, `path`, `title`, `author`, `description`, `format`, `page_count`, `status`, `ingest_error`, `created_at` | metadados do livro             |
+| `books`           | `id`, `sha256`, `path`, `title`, `author`, `description`, `format`, `page_count`, `status`, `ingest_error`, `auto_tagged_at`, `created_at` | metadados do livro             |
 | `tags`            | `id`, `name`, `slug` (único), `color`                    | tags planas                    |
 | `book_tags`       | `book_id`, `tag_id` (PK composta)                        | junction livro↔tag             |
 | `chunks`          | `id`, `book_id`, `page_start`, `page_end`, `text`        | range de páginas + texto (FTS) |
@@ -46,6 +46,7 @@ dimensão diferente exige migration nova + re-embed total manual.
 | 0007 | `books.rag_text` (texto de busca p/ RAG)     |
 | 0008 | remove `books.rag_text`; catálogo usa a descrição |
 | 0009 | recria `vec_chunks` e `vec_summaries` em 1024 dimensões |
+| 0010 | `books.auto_tagged_at` (quando o LLM classificou o livro) |
 
 Aplicadas por `migrator.migrate()` na ordem, com a versão registrada em
 `schema_version`. Idempotente: rodar de novo não faz nada.
