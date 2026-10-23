@@ -275,6 +275,28 @@ choice below.
 
 ---
 
+## Fila de jobs para o Ollama
+
+Hoje embed, re-embed, resumo e tag rodam em `BackgroundTasks` do FastAPI:
+sequenciais dentro de um request, mas em memória e sem coordenação entre
+requests. Dois cliques (ou upload + reembed) mandam carga em paralelo para o
+host do Ollama, que não aguenta; um restart da API perde o resto da fila e
+deixa livros presos em `pending`/`reembedding`.
+
+- [ ] Fila persistente de jobs (tabela no SQLite: tipo, book_id, status,
+      tentativas, último erro, timestamps)
+- [ ] Enfileirar pode ser concorrente (qualquer request insere job)
+- [ ] Um único worker consome a fila: **uma chamada ao Ollama por vez**
+- [ ] Retry com backoff e limite de tentativas; esgotou → livro `failed`
+      com o erro da última tentativa
+- [ ] No startup, jobs `running` voltam para `queued` (sem livro preso)
+- [ ] Não duplicar job igual já na fila (mesmo tipo + book_id)
+- [ ] Admin: ver a fila (posição, tentativas, erro) e cancelar
+- [ ] Logar falhas em JSON estruturado (hoje o erro só vai para
+      `ingest_error`; o do tagueamento some em `tag_many`)
+- [ ] Rotas `reembed-batch`, `summaries/*` e `tags/auto` passam a só
+      enfileirar
+
 ## Deferred / v2
 - [ ] Filesystem watcher for auto-scan (replaces manual trigger)
 - [ ] Auto-suggest tags on ingest (embed tag names/descriptions, cosine vs chunks)
