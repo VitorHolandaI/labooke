@@ -5,10 +5,12 @@ from __future__ import annotations
 import itertools
 import json
 import random
+import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
 import numpy as np
+import structlog
 
 from labooke_core.config import Settings
 from labooke_core.domain.models import Book
@@ -27,6 +29,7 @@ from labooke_core.store.books_repo import BooksRepo
 from labooke_core.store.summaries_repo import SummariesRepo
 
 _MAX_EXCERPT_CHARS = 12_000
+_log = structlog.get_logger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,6 +55,19 @@ def _parse_summary(text: str) -> SummaryResult:
         return SummaryResult(summary=summary, author=author or None)
     except (json.JSONDecodeError, KeyError, TypeError):
         return SummaryResult(summary=text.strip(), author=None)
+
+
+def _require_summary(result: SummaryResult, raw_reply: str) -> SummaryResult:
+    """Fail loudly instead of saving a blank description.
+
+    Thinking models can put the whole answer in a separate reasoning field
+    and leave ``content`` empty.
+    """
+    if not result.summary:
+        raise LlmUnavailable(
+            f"empty LLM summary: reply {raw_reply[:200]!r}, expected JSON with a 'summary' text"
+        )
+    return result
 
 
 class SummarizeService:
@@ -95,7 +111,9 @@ class SummarizeService:
         book = self._books.get(book_id)
         page_limit = pages or self._pages_provider()
         excerpt = self._first_pages_text(book, page_limit)
-        result = _parse_summary(self._generate(client, book, excerpt))
+        _log.info("summary_excerpt_ready", book_id=book_id, pages=page_limit, chars=len(excerpt))
+        reply = self._generate(client, book, excerpt)
+        result = _require_summary(_parse_summary(reply), reply)
         self._books.update_description(book_id, result.summary)
         if result.author:
             self._books.update_author(book_id, result.author)
@@ -109,14 +127,23 @@ class SummarizeService:
 
         Returns ``(book_id, error_or_None)`` for each requested id.
         """
-        results: list[tuple[int, str | None]] = []
-        for book_id in book_ids:
-            try:
-                self.summarize(book_id, pages=pages)
-                results.append((book_id, None))
-            except Exception as exc:
-                results.append((book_id, str(exc)))
+        _log.info("summary_batch_started", book_ids=list(book_ids), pages=pages)
+        results = [(book_id, self._summarize_logged(book_id, pages)) for book_id in book_ids]
+        failed = sum(1 for _, error in results if error is not None)
+        _log.info("summary_batch_finished", total=len(results), failed=failed)
         return results
+
+    def _summarize_logged(self, book_id: int, pages: int | None) -> str | None:
+        """Summarize one book; return the error text instead of raising."""
+        started = time.monotonic()
+        try:
+            book = self.summarize(book_id, pages=pages)
+        except Exception as exc:
+            _log.exception("summary_book_failed", book_id=book_id, error=str(exc))
+            return str(exc)
+        elapsed = round(time.monotonic() - started, 1)
+        _log.info("summary_book_done", book_id=book_id, seconds=elapsed, title=book.title)
+        return None
 
     def pick_random_candidates(self, count: int) -> list[int]:
         """Return ``count`` random book ids that still lack a summary."""

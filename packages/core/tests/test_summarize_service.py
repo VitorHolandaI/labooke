@@ -10,6 +10,7 @@ from labooke_core.store.books_repo import BooksRepo
 from labooke_core.store.db import open_db
 from labooke_core.store.summaries_repo import SummariesRepo
 from labooke_core.store.vectors_repo import VEC_DIM
+from structlog.testing import capture_logs
 
 
 class _FakeChatClient:
@@ -139,6 +140,36 @@ def test_summarize_many_isolates_failures(books, summaries):
     assert results[0] == (good, None)
     assert results[1][0] == 9999
     assert results[1][1] is not None
+
+
+def test_summarize_many_logs_failure_with_book_id_and_error(books, summaries):
+    service = _service(books, summaries, _FakeChatClient('{"summary": "S"}'))
+    with capture_logs() as logs:
+        service.summarize_many([9999])
+    failed = [e for e in logs if e["event"] == "summary_book_failed"]
+    assert failed[0]["book_id"] == 9999
+    assert failed[0]["error"]
+    assert failed[0]["log_level"] == "error"
+
+
+def test_summarize_many_logs_start_success_and_finish(books, summaries):
+    service = _service(books, summaries, _FakeChatClient('{"summary": "S"}'))
+    book_id = _make_book(books).id
+    with capture_logs() as logs:
+        service.summarize_many([book_id], pages=3)
+    events = [e["event"] for e in logs]
+    assert events[0] == "summary_batch_started"
+    assert "summary_book_done" in events
+    assert logs[-1]["event"] == "summary_batch_finished"
+    assert logs[-1]["failed"] == 0
+
+
+def test_summarize_rejects_empty_llm_reply(books, summaries):
+    service = _service(books, summaries, _FakeChatClient("   "))
+    book_id = _make_book(books).id
+    with pytest.raises(LlmUnavailable, match="empty"):
+        service.summarize(book_id)
+    assert books.get(book_id).description is None
 
 
 def test_pick_random_candidates_returns_missing_only(books, summaries):
