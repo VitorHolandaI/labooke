@@ -1,10 +1,10 @@
 import { GlobalWorkerOptions, getDocument } from "pdfjs-dist";
 import PdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
-import type { PDFDocumentProxy } from "pdfjs-dist";
-import { useCallback, useEffect, useReducer, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { bookFileUrl } from "../../../api/reader";
 import { useElementSize } from "../hooks/useElementSize";
+import { usePdfDocument } from "../hooks/usePdfDocument";
 import { useReaderKeyboard } from "../hooks/useReaderKeyboard";
 import { PDF_ZOOM_KEY, useReaderZoom } from "../hooks/useReaderZoom";
 import { useSwipeGesture } from "../hooks/useSwipeGesture";
@@ -15,23 +15,6 @@ import styles from "./PdfViewer.module.css";
 import { ZoomControls } from "./ZoomControls";
 
 GlobalWorkerOptions.workerSrc = PdfWorker;
-
-type DocState =
-  { phase: "loading" } | { phase: "ready"; total: number } | { phase: "error"; message: string };
-
-type DocAction =
-  { type: "load" } | { type: "ready"; total: number } | { type: "error"; message: string };
-
-function docReducer(_: DocState, action: DocAction): DocState {
-  switch (action.type) {
-    case "load":
-      return { phase: "loading" };
-    case "ready":
-      return { phase: "ready", total: action.total };
-    case "error":
-      return { phase: "error", message: action.message };
-  }
-}
 
 type Layout = "single" | "double";
 
@@ -50,9 +33,8 @@ export function PdfViewer({
   isBookmarked,
   onAddBookmark,
 }: Props) {
-  const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null);
+  const { pdf, state: doc } = usePdfDocument(bookFileUrl(bookId), getDocument);
   const [page, setPage] = useState(initialPage);
-  const [doc, dispatch] = useReducer(docReducer, { phase: "loading" });
   const [layout, setLayout] = useState<Layout>("single");
   const [fullscreen, setFullscreen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -67,31 +49,6 @@ export function PdfViewer({
   const goNext = useCallback(() => setPage((p) => Math.min(total, p + step)), [total, step]);
   const goPrev = useCallback(() => setPage((p) => Math.max(1, p - step)), [step]);
   const { onTouchStart, onTouchMove, onTouchEnd } = useSwipeGesture(goNext, goPrev);
-
-  // Load PDF document
-  useEffect(() => {
-    let cancelled = false;
-    let loadedPdf: PDFDocumentProxy | null = null;
-    dispatch({ type: "load" });
-    const task = getDocument({ url: bookFileUrl(bookId) });
-    task.promise
-      .then((nextPdf) => {
-        if (cancelled) {
-          nextPdf.destroy();
-          return;
-        }
-        loadedPdf = nextPdf;
-        setPdf(nextPdf);
-        dispatch({ type: "ready", total: nextPdf.numPages });
-      })
-      .catch((err) => {
-        if (!cancelled) dispatch({ type: "error", message: (err as Error).message });
-      });
-    return () => {
-      cancelled = true;
-      void loadedPdf?.destroy();
-    };
-  }, [bookId]);
 
   // Notify parent of page changes
   useEffect(() => {
