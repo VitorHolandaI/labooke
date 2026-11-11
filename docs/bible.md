@@ -13,6 +13,8 @@ padrão `http://localhost:8000`) — não conecta direto ao banco.
 | `bible tags` | Lista tags com contagem de livros |
 | `bible search <query>` | Busca via LLM/ask (padrão) ou lexical (`--lexical`) |
 | `bible read <id> [-p N]` | Abre o pager TUI na página N (padrão 1) |
+| `bible read <id> --tdf` | Abre o PDF original no [tdf](https://github.com/itsjunetime/tdf) |
+| `bible cache` | Menu para escolher quais PDFs baixados apagar do cache |
 | `bible tag <id> +slug -slug` | Adiciona/remove tags de um livro |
 | `bible scan` | Dispara ingestão da pasta de import |
 | `bible history [-n N]` | Mostra últimas N queries |
@@ -31,6 +33,49 @@ bible read 15 -p 42 # abre diretamente na página 42
 Consequência: há um pequeno delay a cada troca de página (roundtrip HTTP +
 extração do PDF). Para leitura linear isso é perceptível. Melhoria futura:
 cachear a página seguinte em background após cada carregamento.
+
+## Ler o PDF no tdf (opcional)
+
+O pager mostra só o texto extraído. Para ver o PDF de verdade (imagens,
+fórmulas, layout) num terminal com suporte a imagem (foot, kitty, ghostty),
+use `--tdf`:
+
+```
+bible read 15 --tdf
+```
+
+O `tdf` é uma dependência externa opcional: precisa estar no `PATH`, e sem ele
+o resto da CLI funciona normalmente. O fluxo é:
+
+1. `GET /api/books/{id}/file` baixa o PDF (`_api_client.py`).
+2. O arquivo fica em `$XDG_CACHE_HOME/labooke/books/<sha256>.pdf`
+   (`~/.cache/...` por padrão), então a segunda abertura não baixa de novo
+   (`_book_files.py`). Um `index.json` na mesma pasta guarda o título de
+   cada arquivo.
+3. `tdf <arquivo>` roda no terminal atual (`_pdf_viewer.py`).
+
+Limitações: só funciona com livros PDF (EPUB/TXT saem com erro) e o `tdf` não
+tem opção de página inicial, então `-p` é ignorado com aviso.
+
+## Limpar o cache (`bible cache`)
+
+`bible cache` abre um menu com os PDFs baixados, ordenados por título e com o
+tamanho de cada um. Dá para apagar só alguns e manter os que você ainda lê.
+
+| Tecla | Ação |
+|---|---|
+| `↑` / `↓` (ou `j` / `k`) | Move o cursor |
+| `Espaço` | Marca / desmarca o livro do cursor |
+| `a` | Marca todos os visíveis (respeita a busca) |
+| `u` | Desmarca todos |
+| `/` | Filtra por título (vazio mostra tudo de novo) |
+| `Enter` | Apaga os marcados, depois de confirmar com `y` |
+| `q` / `Esc` | Sai sem apagar nada |
+
+Exemplo: para manter só um livro, marque todos com `a`, desmarque o que fica
+com `Espaço` e confirme com `Enter`. A lógica do menu está em
+`_cache_menu.py` (estado puro, testado sem terminal) e o desenho e a leitura
+de teclas estão em `_cache_tui.py`.
 
 ## Teclas do pager
 

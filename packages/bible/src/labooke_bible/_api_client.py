@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -25,16 +26,23 @@ class ApiClient:
         'http://localhost:8000'
     """
 
-    def __init__(self, base_url: str | None = None, timeout: float = 120.0) -> None:
+    def __init__(
+        self,
+        base_url: str | None = None,
+        timeout: float = 120.0,
+        *,
+        http: httpx.Client | None = None,
+    ) -> None:
         base = base_url or os.environ.get("LABOOKE_API_URL") or "http://localhost:8000"
         self._base = base.rstrip("/")
         self._timeout = timeout
+        self._http = http or httpx.Client()
 
     # ── helpers ──────────────────────────────────────────────────────────────
 
     def _get(self, path: str, params: dict | None = None) -> Any:
         try:
-            resp = httpx.get(f"{self._base}{path}", params=params or {}, timeout=self._timeout)
+            resp = self._http.get(f"{self._base}{path}", params=params or {}, timeout=self._timeout)
         except httpx.TransportError as exc:
             raise ApiError(0, str(exc)) from exc
         _raise(resp)
@@ -42,7 +50,7 @@ class ApiClient:
 
     def _post(self, path: str, json: object = None) -> Any:
         try:
-            resp = httpx.post(f"{self._base}{path}", json=json, timeout=self._timeout)
+            resp = self._http.post(f"{self._base}{path}", json=json, timeout=self._timeout)
         except httpx.TransportError as exc:
             raise ApiError(0, str(exc)) from exc
         _raise(resp)
@@ -50,7 +58,7 @@ class ApiClient:
 
     def _delete(self, path: str) -> None:
         try:
-            resp = httpx.delete(f"{self._base}{path}", timeout=self._timeout)
+            resp = self._http.delete(f"{self._base}{path}", timeout=self._timeout)
         except httpx.TransportError as exc:
             raise ApiError(0, str(exc)) from exc
         _raise(resp)
@@ -68,9 +76,7 @@ class ApiClient:
         params: dict = {}
         if tag_ids:
             params["tags"] = tag_ids
-        resp = httpx.get(f"{self._base}/api/books", params=params)
-        _raise(resp)
-        return resp.json()["items"]
+        return self._get("/api/books", params)["items"]
 
     def get_book(self, book_id: int) -> dict:
         return self._get(f"/api/books/{book_id}")
@@ -106,10 +112,29 @@ class ApiClient:
         result = self._get(f"/api/books/{book_id}/pages/{page_no}")
         return result["text"]
 
+    def download_file(self, book_id: int, destination: Path) -> None:
+        """Stream the raw book file to ``destination`` (used by ``--tdf``)."""
+        url = f"{self._base}/api/books/{book_id}/file"
+        try:
+            with self._http.stream("GET", url, timeout=self._timeout) as resp:
+                _write_stream(resp, destination)
+        except httpx.TransportError as exc:
+            raise ApiError(0, str(exc)) from exc
+
     # ── admin ─────────────────────────────────────────────────────────────────
 
     def scan(self) -> dict:
         return self._post("/api/admin/scan")
+
+
+def _write_stream(resp: httpx.Response, destination: Path) -> None:
+    """Copy a streamed body to disk without loading the whole PDF in RAM."""
+    if resp.is_error:
+        resp.read()
+        _raise(resp)
+    with destination.open("wb") as out:
+        for block in resp.iter_bytes():
+            out.write(block)
 
 
 def _raise(resp: httpx.Response) -> None:

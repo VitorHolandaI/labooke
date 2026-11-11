@@ -25,9 +25,7 @@ class FakeApiClient:
         self._tags[self._tag_seq] = t
         return t
 
-    def add_book(
-        self, title: str, fmt: str = "txt", tag_ids: list[int] | None = None
-    ) -> dict:
+    def add_book(self, title: str, fmt: str = "txt", tag_ids: list[int] | None = None) -> dict:
         self._book_seq += 1
         b = {
             "id": self._book_seq,
@@ -38,9 +36,7 @@ class FakeApiClient:
         self._books[self._book_seq] = b
         return {"id": b["id"], "title": title, "format": fmt}
 
-    def set_scan_result(
-        self, *, ingested: int = 0, skipped: int = 0, failed: int = 0
-    ) -> None:
+    def set_scan_result(self, *, ingested: int = 0, skipped: int = 0, failed: int = 0) -> None:
         self._scan_result = {"ingested": ingested, "skipped": skipped, "failed": failed}
 
     def _book_out(self, b: dict) -> dict:
@@ -51,6 +47,7 @@ class FakeApiClient:
             "format": b["format"],
             "tags": tags,
             "page_count": 5,
+            "sha256": f"sha-{b['id']}",
         }
 
     # ── ApiClient interface ────────────────────────────────────────────────────
@@ -93,13 +90,9 @@ class FakeApiClient:
             if query.lower() not in b["title"].lower():
                 continue
             if tag_ids:
-                if tag_mode == "all" and not all(
-                    tid in b["tag_ids"] for tid in tag_ids
-                ):
+                if tag_mode == "all" and not all(tid in b["tag_ids"] for tid in tag_ids):
                     continue
-                if tag_mode == "any" and not any(
-                    tid in b["tag_ids"] for tid in tag_ids
-                ):
+                if tag_mode == "any" and not any(tid in b["tag_ids"] for tid in tag_ids):
                     continue
             hits.append({"book_id": b["id"], "page_start": 1, "snippet": b["title"]})
         return hits[:k]
@@ -109,6 +102,9 @@ class FakeApiClient:
 
     def scan(self) -> dict:
         return self._scan_result
+
+    def download_file(self, book_id: int, destination: Path) -> None:
+        destination.write_bytes(b"%PDF-1.7 fake " + str(book_id).encode())
 
 
 @pytest.fixture
@@ -122,14 +118,10 @@ def fake_history(tmp_path: Path) -> HistoryStore:
 
 
 @pytest.fixture(autouse=True)
-def inject_client(
-    fake_client: FakeApiClient, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def inject_client(fake_client: FakeApiClient, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("labooke_bible.cli._client_singleton", fake_client)
 
 
 @pytest.fixture(autouse=True)
-def inject_history(
-    fake_history: HistoryStore, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def inject_history(fake_history: HistoryStore, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("labooke_bible.cli._history_singleton", fake_history)

@@ -2,15 +2,28 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from pathlib import Path
+
 import typer
 
 from labooke_bible._api_client import ApiClient, ApiError
+from labooke_bible._book_files import (
+    CacheCleared,
+    cached_book_file,
+    default_cache_dir,
+    list_cached_books,
+)
+from labooke_bible._cache_tui import format_size, run_cache_menu
 from labooke_bible._history import HistoryStore
+from labooke_bible._pdf_viewer import PdfViewer, PdfViewerError, TdfViewer
 
 app = typer.Typer(help="Search and browse your book library.")
 
 _client_singleton: ApiClient | None = None
 _history_singleton: HistoryStore | None = None
+_viewer_singleton: PdfViewer | None = None
+_cache_menu_runner: Callable[[Path], CacheCleared] | None = None
 
 
 def _client() -> ApiClient:
@@ -31,7 +44,18 @@ def _history() -> HistoryStore:
     return _history_singleton
 
 
-def _abort(err: ApiError) -> None:
+def _viewer() -> PdfViewer:
+    global _viewer_singleton
+    if _viewer_singleton is None:
+        _viewer_singleton = TdfViewer()
+    return _viewer_singleton
+
+
+def _cache_menu() -> Callable[[Path], CacheCleared]:
+    return _cache_menu_runner or run_cache_menu
+
+
+def _abort(err: ApiError | PdfViewerError) -> None:
     typer.echo(str(err), err=True)
     raise typer.Exit(code=1)
 
@@ -138,8 +162,11 @@ def tag(
 def read(
     book_id: int = typer.Argument(..., help="Book ID to open."),
     page: int = typer.Option(1, "-p", "--page", help="Page number to start at."),
+    tdf: bool = typer.Option(
+        False, "--tdf", help="Open the PDF itself in the external tdf viewer."
+    ),
 ) -> None:
-    """Open the TUI pager for a book."""
+    """Open the TUI pager for a book, or the PDF in tdf with --tdf."""
     from labooke_bible._tui import run_pager
 
     try:
@@ -148,6 +175,9 @@ def read(
     except ApiError as e:
         _abort(e)
 
+    if tdf:
+        _read_with_tdf(client, book, page)
+        return
     run_pager(
         get_page_text=client.get_page,
         book_id=book_id,
@@ -155,6 +185,17 @@ def read(
         total_pages=book.get("page_count") or 1,
         start_page=page,
     )
+
+
+@app.command()
+def cache() -> None:
+    """Pick PDFs downloaded for --tdf and delete them from the local cache."""
+    cache_dir = default_cache_dir()
+    if not list_cached_books(cache_dir):
+        typer.echo(f"Cache is empty ({cache_dir}).")
+        return
+    cleared = _cache_menu()(cache_dir)
+    typer.echo(f"\nDeleted {cleared.files} file(s), freed {format_size(cleared.size_bytes)}.")
 
 
 @app.command()
@@ -199,6 +240,21 @@ def last(
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
+
+
+def _read_with_tdf(client: ApiClient, book: dict, page: int) -> None:
+    """Download the PDF once into the cache and hand it to tdf."""
+    if book["format"] != "pdf":
+        typer.echo(
+            f"--tdf only opens PDF books; book {book['id']} is {book['format']!r}.", err=True
+        )
+        raise typer.Exit(code=1)
+    if page != 1:
+        typer.echo("tdf has no start-page option; opening at page 1.", err=True)
+    try:
+        _viewer().open(cached_book_file(client, book, default_cache_dir()))
+    except (ApiError, PdfViewerError) as e:
+        _abort(e)
 
 
 def _echo_hits(hits: list[dict]) -> None:
