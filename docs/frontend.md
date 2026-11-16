@@ -26,6 +26,11 @@ frontend/src/
 ## Tecnologias
 
 - **TanStack Query** — cache de dados, mutations, invalidação automática
+- **pdf.js 6** — decodifica JBIG2/CCITT/JPEG 2000 em WebAssembly; os arquivos
+  de `node_modules/pdfjs-dist/wasm` são copiados para `public/pdfjs-wasm` por
+  `scripts/sync-pdfjs-wasm.mjs` antes de `dev`/`build` (`wasmUrl` em
+  `src/features/reader/pdfDocument.ts`). Sem eles, PDF digitalizado abre em
+  branco, sem erro visível.
 - **CSS Modules** — escopo local, sem Tailwind ([ADR 0010](../decisions/0010-css-modules-no-tailwind.md))
 - **msw** — mock de API nos testes (Vitest + Testing Library)
 - **React Router v6** — roteamento SPA com fallback nginx

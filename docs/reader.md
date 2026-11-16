@@ -35,6 +35,9 @@ Barra de controles (topo):
   visíveis ficam destacados em amarelo.
 - PDFs compostos apenas por imagens não possuem texto pesquisável ou
   selecionável; esses arquivos precisam passar por OCR antes da importação.
+  A imagem da página em si continua sendo renderizada: páginas em CCITT/JBIG2
+  dependem dos decodificadores wasm do pdf.js, servidos em `/pdfjs-wasm/`
+  (ver [frontend.md](frontend.md)).
 
 ## Tela cheia
 
