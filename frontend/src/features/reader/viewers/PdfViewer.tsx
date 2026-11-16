@@ -1,8 +1,7 @@
-import { GlobalWorkerOptions, getDocument } from "pdfjs-dist";
-import PdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { useCallback, useEffect, useState } from "react";
 
 import { bookFileUrl } from "../../../api/reader";
+import { openPdfDocument } from "../pdfDocument";
 import { useElementSize } from "../hooks/useElementSize";
 import { usePdfDocument } from "../hooks/usePdfDocument";
 import { useReaderKeyboard } from "../hooks/useReaderKeyboard";
@@ -13,8 +12,6 @@ import { PdfPageLayer } from "./PdfPageLayer";
 import { PdfSearchControls } from "./PdfSearchControls";
 import styles from "./PdfViewer.module.css";
 import { ZoomControls } from "./ZoomControls";
-
-GlobalWorkerOptions.workerSrc = PdfWorker;
 
 type Layout = "single" | "double";
 
@@ -33,7 +30,7 @@ export function PdfViewer({
   isBookmarked,
   onAddBookmark,
 }: Props) {
-  const { pdf, state: doc } = usePdfDocument(bookFileUrl(bookId), getDocument);
+  const { pdf, state: doc } = usePdfDocument(bookFileUrl(bookId), openPdfDocument);
   const [page, setPage] = useState(initialPage);
   const [layout, setLayout] = useState<Layout>("single");
   const [fullscreen, setFullscreen] = useState(false);
